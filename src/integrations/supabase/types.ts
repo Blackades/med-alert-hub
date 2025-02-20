@@ -9,13 +9,148 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      database: {
+        Row: {
+          created_at: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      medication_schedules: {
+        Row: {
+          created_at: string | null
+          id: string
+          medication_id: string
+          next_dose: string
+          scheduled_time: string
+          taken: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          medication_id: string
+          next_dose: string
+          scheduled_time: string
+          taken?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          medication_id?: string
+          next_dose?: string
+          scheduled_time?: string
+          taken?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_schedules_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medications: {
+        Row: {
+          created_at: string | null
+          dosage: string
+          frequency: string
+          id: string
+          instructions: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dosage: string
+          frequency: string
+          id?: string
+          instructions?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dosage?: string
+          frequency?: string
+          id?: string
+          instructions?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          medication_schedule_id: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          medication_schedule_id: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          medication_schedule_id?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_medication_schedule_id_fkey"
+            columns: ["medication_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "medication_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_next_dose: {
+        Args: {
+          p_current_time: string
+          p_scheduled_time: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
