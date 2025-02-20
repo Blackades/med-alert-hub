@@ -15,6 +15,7 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
   const [times, setTimes] = useState<string[]>([""]);
   const [open, setOpen] = useState(false);
 
@@ -29,7 +30,7 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
     onAdd({
       name,
       dosage,
-      instructions,
+      instructions: `${instructions} (${frequency})`,
       schedule,
     });
 
@@ -82,6 +83,18 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
               required
               className="w-full"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="frequency">Frequency</Label>
+            <select
+              id="frequency"
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="instructions">Instructions (Optional)</Label>
