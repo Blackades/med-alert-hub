@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { MedicationCard } from "@/components/MedicationCard";
 import { AddMedicationDialog } from "@/components/AddMedicationDialog";
@@ -158,9 +159,34 @@ const Index = () => {
     const now = new Date();
     const todayStr = format(now, "yyyy-MM-dd");
     
-    const nextDoseTime = medication.schedule
-      .map(slot => parseISO(`${todayStr}T${slot.time}`))
-      .find(time => time > now) || addDays(parseISO(`${todayStr}T${medication.schedule[0].time}`), 1);
+    // If no schedule exists, return a default nextDose time
+    if (!medication.schedule || medication.schedule.length === 0) {
+      return {
+        ...medication,
+        nextDose: now.toISOString(),
+        status: 'upcoming',
+        schedule: [] // Ensure schedule is never undefined
+      };
+    }
+
+    // Filter out invalid schedule times
+    const validScheduleTimes = medication.schedule
+      .filter(slot => slot && slot.time)
+      .map(slot => parseISO(`${todayStr}T${slot.time}`));
+
+    // If no valid times, use current time
+    if (validScheduleTimes.length === 0) {
+      return {
+        ...medication,
+        nextDose: now.toISOString(),
+        status: 'upcoming',
+        schedule: medication.schedule
+      };
+    }
+
+    // Find next dose time from valid schedules
+    const nextDoseTime = validScheduleTimes.find(time => time > now) || 
+      addDays(parseISO(`${todayStr}T${medication.schedule[0].time}`), 1);
 
     const status = medication.schedule.some(slot => slot.taken)
       ? 'taken'
