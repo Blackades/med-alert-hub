@@ -21,13 +21,13 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#34D399",
+          DEFAULT: "#50C9CE",
           foreground: "#FFFFFF",
           50: '#ECFDF5',
           100: '#D1FAE5',
           200: '#A7F3D0',
           300: '#6EE7B7',
-          400: '#34D399',
+          400: '#50C9CE',
           500: '#10B981',
           600: '#059669',
           700: '#047857',
@@ -35,8 +35,8 @@ export default {
           900: '#064E3B',
         },
         secondary: {
-          DEFAULT: "#F3F4F6",
-          foreground: "#1F2937",
+          DEFAULT: "#2E382E",
+          foreground: "#FFFFFF",
         },
         destructive: {
           DEFAULT: "#FF6B6B",

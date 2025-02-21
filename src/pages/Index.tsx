@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { MedicationCard } from "@/components/MedicationCard";
 import { AddMedicationDialog } from "@/components/AddMedicationDialog";
@@ -10,12 +9,17 @@ import { format, parseISO, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
+import { Moon, Sun, Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "next-themes";
 
 const Index = () => {
   const [medications, setMedications] = useState<Medication[]>([]);
   const { toast } = useToast();
   const { user, session } = useAuth();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (!session) {
@@ -69,7 +73,6 @@ const Index = () => {
 
   const addMedication = async (newMedication: Omit<Medication, "id">) => {
     try {
-      // Insert medication
       const { data: medData, error: medError } = await supabase
         .from('medications')
         .insert({
@@ -77,14 +80,13 @@ const Index = () => {
           dosage: newMedication.dosage,
           instructions: newMedication.instructions,
           user_id: user?.id,
-          frequency: 'daily', // Default to daily for now
+          frequency: 'daily',
         })
         .select()
         .single();
 
       if (medError) throw medError;
 
-      // Insert schedules
       const schedulePromises = newMedication.schedule.map(slot => 
         supabase
           .from('medication_schedules')
@@ -98,10 +100,8 @@ const Index = () => {
 
       await Promise.all(schedulePromises);
 
-      // Refresh medications list
       await fetchMedications();
 
-      // Schedule notification
       await supabase.functions.invoke('send-notification', {
         body: {
           email: user?.email,
@@ -180,7 +180,6 @@ const Index = () => {
       const medication = medications.find(med => med.id === id);
       if (!medication) return;
 
-      // Update all schedule slots for this medication
       const { error } = await supabase
         .from('medication_schedules')
         .update({ taken: true })
@@ -233,45 +232,136 @@ const Index = () => {
     .sort((a, b) => new Date(a.nextDose).getTime() - new Date(b.nextDose).getTime());
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Medication Reminder</h1>
-            <p className="text-gray-600 mt-1">Keep track of your daily medications</p>
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h2 className="text-2xl font-bold text-primary">MedAlert</h2>
           </div>
-          <div className="flex items-center space-x-2">
+          <nav className="flex-1 ml-8">
+            <ul className="flex space-x-4">
+              <li><a href="#" className="text-muted-foreground hover:text-foreground">Dashboard</a></li>
+              <li><a href="#" className="text-muted-foreground hover:text-foreground">Calendar</a></li>
+              <li><a href="#" className="text-muted-foreground hover:text-foreground">Reports</a></li>
+            </ul>
+          </nav>
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
             <UserSettingsDialog onSave={handleSaveSettings} />
-            <AddMedicationDialog onAdd={addMedication} />
           </div>
         </div>
+      </header>
 
-        {sortedMedications.length > 0 && (
-          <div className="mb-8 animate-fade-in">
-            <MedicationStats medications={sortedMedications} />
-          </div>
-        )}
-
-        <div className="space-y-4">
-          {sortedMedications.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-              <p className="text-gray-600">No medications added yet.</p>
-              <p className="text-gray-500 text-sm mt-1">
-                Click the "Add Medication" button to get started.
-              </p>
+      <div className="container py-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold">Medication Reminder</h1>
+                <p className="text-muted-foreground">Keep track of your daily medications</p>
+              </div>
+              <AddMedicationDialog onAdd={addMedication} />
             </div>
-          ) : (
-            sortedMedications.map((medication) => (
-              <MedicationCard
-                key={medication.id}
-                medication={medication}
-                onTake={handleTakeMedication}
-                onSkip={handleSkipMedication}
-              />
-            ))
-          )}
+
+            {sortedMedications.length > 0 && (
+              <div className="animate-fade-in">
+                <MedicationStats medications={sortedMedications} />
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {sortedMedications.length === 0 ? (
+                <div className="text-center py-12 bg-card rounded-lg">
+                  <img
+                    src="/lovable-uploads/e747fbbf-5ff6-4891-90c6-c43b8b464dff.png"
+                    alt="Empty state"
+                    className="w-32 h-32 mx-auto mb-4 rounded-full"
+                  />
+                  <p className="text-muted-foreground">No medications added yet.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Click the "Add Medication" button to get started.
+                  </p>
+                </div>
+              ) : (
+                sortedMedications.map((medication) => (
+                  <MedicationCard
+                    key={medication.id}
+                    medication={medication}
+                    onTake={handleTakeMedication}
+                    onSkip={handleSkipMedication}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+
+          <aside className={`bg-card rounded-lg p-6 transition-all duration-300 ${
+            sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+          }`}>
+            <h2 className="text-xl font-semibold mb-4">Upcoming Reminders</h2>
+            <div className="space-y-4">
+              {sortedMedications
+                .filter(med => med.status === 'upcoming')
+                .slice(0, 3)
+                .map(med => (
+                  <div key={med.id} className="flex items-center space-x-3 p-3 bg-background rounded-md">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <div>
+                      <p className="font-medium">{med.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(med.nextDose), 'h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold mb-4">Quick Stats</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-background p-4 rounded-md">
+                  <p className="text-2xl font-bold text-primary">
+                    {sortedMedications.filter(m => m.status === 'taken').length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Taken Today</p>
+                </div>
+                <div className="bg-background p-4 rounded-md">
+                  <p className="text-2xl font-bold text-destructive">
+                    {sortedMedications.filter(m => m.status === 'overdue').length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Overdue</p>
+                </div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
+
+      <footer className="border-t border-border/40 mt-12 py-6 bg-card">
+        <div className="container">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-sm text-muted-foreground">© 2024 MedAlert. All rights reserved.</p>
+            <div className="flex space-x-4 mt-4 md:mt-0">
+              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms</a>
+              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy</a>
+              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Contact</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
