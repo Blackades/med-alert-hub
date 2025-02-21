@@ -129,18 +129,21 @@ const Index = () => {
     }
   };
 
-  const handleSaveSettings = async (settings: { email: string }) => {
+  const handleSaveSettings = async (settings: { email: string; phoneNumber: string }) => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ email: settings.email })
+        .update({ 
+          email: settings.email,
+          phone_number: settings.phoneNumber 
+        })
         .eq('id', user?.id);
 
       if (error) throw error;
 
       toast({
         title: "Settings saved",
-        description: `Notifications will be sent to ${settings.email}`,
+        description: `Notifications will be sent to ${settings.email} and ${settings.phoneNumber}`,
       });
     } catch (error: any) {
       toast({
