@@ -6,6 +6,10 @@ export type Medication = {
   instructions?: string;
   schedule: TimeSlot[];
   color?: string;
+  frequency: {
+    timesPerDay: number;
+    intervalHours: number;
+  };
 };
 
 export type TimeSlot = {

@@ -16,10 +16,11 @@ export const MedicationStats = ({ medications }: MedicationStatsProps) => {
     return format(date, 'EEE');
   }).reverse();
 
+  // Initialize data with zeros
   const data = daysOfWeek.map(day => ({
     name: day,
-    taken: Math.floor(Math.random() * 100),
-    missed: Math.floor(Math.random() * 20),
+    taken: 0,
+    missed: 0,
   }));
 
   return (

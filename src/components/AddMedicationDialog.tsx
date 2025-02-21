@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import type { Medication, TimeSlot } from "@/types/medication";
+import { addHours, format } from "date-fns";
 
 interface AddMedicationDialogProps {
   onAdd: (medication: Omit<Medication, "id">) => void;
@@ -15,40 +16,44 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
-  const [times, setTimes] = useState<string[]>([""]);
+  const [timesPerDay, setTimesPerDay] = useState(1);
+  const [firstDoseTime, setFirstDoseTime] = useState("");
   const [open, setOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const schedule: TimeSlot[] = times.map((time, index) => ({
-      id: `time-${index}`,
-      time,
-      taken: false,
-    }));
+    
+    const intervalHours = 24 / timesPerDay;
+    const schedule: TimeSlot[] = [];
+    
+    // Generate all dose times based on first dose and frequency
+    for (let i = 0; i < timesPerDay; i++) {
+      const baseTime = new Date(`2000-01-01T${firstDoseTime}`);
+      const doseTime = addHours(baseTime, i * intervalHours);
+      schedule.push({
+        id: `time-${i}`,
+        time: format(doseTime, 'HH:mm'),
+        taken: false,
+      });
+    }
 
     onAdd({
       name,
       dosage,
-      instructions: `${instructions} (${frequency})`,
+      instructions,
       schedule,
+      frequency: {
+        timesPerDay,
+        intervalHours,
+      },
     });
 
     setName("");
     setDosage("");
     setInstructions("");
-    setTimes([""]);
+    setTimesPerDay(1);
+    setFirstDoseTime("");
     setOpen(false);
-  };
-
-  const addTimeSlot = () => {
-    setTimes([...times, ""]);
-  };
-
-  const updateTime = (index: number, value: string) => {
-    const newTimes = [...times];
-    newTimes[index] = value;
-    setTimes(newTimes);
   };
 
   return (
@@ -85,16 +90,28 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="frequency">Frequency</Label>
-            <select
-              id="frequency"
-              value={frequency}
-              onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
+            <Label htmlFor="timesPerDay">Times per Day</Label>
+            <Input
+              id="timesPerDay"
+              type="number"
+              min="1"
+              max="24"
+              value={timesPerDay}
+              onChange={(e) => setTimesPerDay(parseInt(e.target.value))}
+              required
+              className="w-full"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="firstDoseTime">First Dose Time</Label>
+            <Input
+              id="firstDoseTime"
+              type="time"
+              value={firstDoseTime}
+              onChange={(e) => setFirstDoseTime(e.target.value)}
+              required
+              className="w-full"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="instructions">Instructions (Optional)</Label>
@@ -104,27 +121,6 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
               onChange={(e) => setInstructions(e.target.value)}
               className="w-full"
             />
-          </div>
-          <div className="space-y-2">
-            <Label>Schedule</Label>
-            {times.map((time, index) => (
-              <Input
-                key={index}
-                type="time"
-                value={time}
-                onChange={(e) => updateTime(index, e.target.value)}
-                required
-                className="w-full mt-2"
-              />
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addTimeSlot}
-              className="mt-2"
-            >
-              Add Time
-            </Button>
           </div>
           <Button type="submit" className="w-full bg-primary hover:bg-primary-600">
             Save Medication
