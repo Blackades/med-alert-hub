@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { MedicationCard } from "@/components/MedicationCard";
 import { AddMedicationDialog } from "@/components/AddMedicationDialog";
@@ -57,8 +56,8 @@ const Index = () => {
         dosage: med.dosage,
         instructions: med.instructions,
         frequency: {
-          timesPerDay: med.frequency?.timesPerDay || 1,
-          intervalHours: med.frequency?.intervalHours || 24,
+          timesPerDay: 1,
+          intervalHours: 24,
         },
         schedule: med.medication_schedules.map(schedule => ({
           id: schedule.id,
@@ -164,7 +163,6 @@ const Index = () => {
     const now = new Date();
     const todayStr = format(now, "yyyy-MM-dd");
     
-    // If no schedule exists, return a default nextDose time
     if (!medication.schedule || medication.schedule.length === 0) {
       return {
         ...medication,
@@ -174,12 +172,10 @@ const Index = () => {
       };
     }
 
-    // Filter out invalid schedule times
     const validScheduleTimes = medication.schedule
       .filter(slot => slot && slot.time)
       .map(slot => parseISO(`${todayStr}T${slot.time}`));
 
-    // If no valid times, use current time
     if (validScheduleTimes.length === 0) {
       return {
         ...medication,
@@ -189,7 +185,6 @@ const Index = () => {
       };
     }
 
-    // Find next dose time from valid schedules
     const nextDoseTime = validScheduleTimes.find(time => time > now) || 
       addDays(parseISO(`${todayStr}T${medication.schedule[0].time}`), 1);
 
@@ -252,6 +247,37 @@ const Index = () => {
     } catch (error: any) {
       toast({
         title: "Error skipping medication",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteMedication = async (id: string) => {
+    try {
+      const { error: scheduleError } = await supabase
+        .from('medication_schedules')
+        .delete()
+        .eq('medication_id', id);
+
+      if (scheduleError) throw scheduleError;
+
+      const { error: medicationError } = await supabase
+        .from('medications')
+        .delete()
+        .eq('id', id);
+
+      if (medicationError) throw medicationError;
+
+      await fetchMedications();
+
+      toast({
+        title: "Medication deleted",
+        description: "The medication has been removed from your schedule.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting medication",
         description: error.message,
         variant: "destructive",
       });
@@ -333,6 +359,7 @@ const Index = () => {
                     medication={medication}
                     onTake={handleTakeMedication}
                     onSkip={handleSkipMedication}
+                    onDelete={handleDeleteMedication}
                   />
                 ))
               )}

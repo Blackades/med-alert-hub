@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Check, X } from "lucide-react";
+import { Clock, Check, X, Trash2 } from "lucide-react";
 import type { MedicationWithStatus } from "@/types/medication";
 import { format } from "date-fns";
 
@@ -10,9 +10,10 @@ interface MedicationCardProps {
   medication: MedicationWithStatus;
   onTake: (id: string) => void;
   onSkip: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-export const MedicationCard = ({ medication, onTake, onSkip }: MedicationCardProps) => {
+export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: MedicationCardProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
   const handleTake = () => {
@@ -46,6 +47,15 @@ export const MedicationCard = ({ medication, onTake, onSkip }: MedicationCardPro
       )}
 
       <div className="mt-4 flex items-center justify-end space-x-2">
+        <Button
+          variant="destructive"
+          size="sm"
+          className="flex items-center space-x-1"
+          onClick={() => onDelete(medication.id)}
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Delete</span>
+        </Button>
         <Button
           variant="outline"
           size="sm"
