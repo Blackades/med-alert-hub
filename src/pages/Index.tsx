@@ -40,6 +40,7 @@ const Index = () => {
           name,
           dosage,
           instructions,
+          frequency,
           medication_schedules (
             id,
             scheduled_time,
@@ -55,6 +56,10 @@ const Index = () => {
         name: med.name,
         dosage: med.dosage,
         instructions: med.instructions,
+        frequency: {
+          timesPerDay: med.frequency?.timesPerDay || 1,
+          intervalHours: med.frequency?.intervalHours || 24,
+        },
         schedule: med.medication_schedules.map(schedule => ({
           id: schedule.id,
           time: schedule.scheduled_time,
