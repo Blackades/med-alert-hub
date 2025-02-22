@@ -11,7 +11,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <Router>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <AppRoutes />
