@@ -16,34 +16,40 @@ interface MedicationCardProps {
 export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: MedicationCardProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const handleTake = () => {
+  const handleTake = async () => {
     setIsAnimating(true);
-    onTake(medication.id);
+    await onTake(medication.id);
     setTimeout(() => setIsAnimating(false), 500);
+  };
+
+  const statusColors = {
+    upcoming: "bg-primary",
+    overdue: "bg-destructive",
+    taken: "bg-green-500"
   };
 
   return (
     <Card className={`p-6 transition-all duration-300 transform hover:shadow-lg ${
       isAnimating ? 'scale-95' : ''
-    } animate-fade-up`}>
+    } animate-fade-up dark:bg-gray-800 dark:border-gray-700`}>
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full bg-primary-${medication.status === 'overdue' ? '600' : '400'}`} />
-            <h3 className="font-semibold text-lg">{medication.name}</h3>
+            <div className={`w-2 h-2 rounded-full ${statusColors[medication.status]}`} />
+            <h3 className="font-semibold text-lg dark:text-white">{medication.name}</h3>
           </div>
-          <p className="text-sm text-gray-500">{medication.dosage}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{medication.dosage}</p>
         </div>
         <div className="flex items-center space-x-2">
           <Clock className="w-4 h-4 text-gray-400" />
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium dark:text-gray-300">
             {format(new Date(medication.nextDose), 'h:mm a')}
           </span>
         </div>
       </div>
 
       {medication.instructions && (
-        <p className="mt-2 text-sm text-gray-600">{medication.instructions}</p>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{medication.instructions}</p>
       )}
 
       <div className="mt-4 flex items-center justify-end space-x-2">
@@ -59,7 +65,7 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
         <Button
           variant="outline"
           size="sm"
-          className="flex items-center space-x-1 hover:bg-gray-100"
+          className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700"
           onClick={() => onSkip(medication.id)}
         >
           <X className="w-4 h-4" />
@@ -67,11 +73,12 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
         </Button>
         <Button
           size="sm"
-          className="flex items-center space-x-1 bg-primary hover:bg-primary-600"
+          className="flex items-center space-x-1"
           onClick={handleTake}
+          disabled={medication.status === 'taken'}
         >
           <Check className="w-4 h-4" />
-          <span>Take</span>
+          <span>{medication.status === 'taken' ? 'Taken' : 'Take'}</span>
         </Button>
       </div>
     </Card>
