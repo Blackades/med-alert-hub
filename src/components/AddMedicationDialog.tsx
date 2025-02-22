@@ -25,20 +25,20 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
     e.preventDefault();
     
     const frequencyMap = {
-      'daily': 24,
-      'twice_daily': 12,
-      'thrice_daily': 8,
-      'every_hour': 1,
+      'daily': { timesPerDay: 1, intervalHours: 24 },
+      'twice_daily': { timesPerDay: 2, intervalHours: 12 },
+      'thrice_daily': { timesPerDay: 3, intervalHours: 8 },
+      'every_hour': { timesPerDay: 24, intervalHours: 1 },
     };
     
-    const intervalHours = frequencyMap[frequency as keyof typeof frequencyMap];
+    const medicationFrequency = frequencyMap[frequency as keyof typeof frequencyMap];
     const schedule: TimeSlot[] = [];
     
     // Generate all dose times based on first dose and frequency
-    const totalDoses = 24 / intervalHours;
+    const totalDoses = 24 / medicationFrequency.intervalHours;
     for (let i = 0; i < totalDoses; i++) {
       const baseTime = new Date(`2000-01-01T${firstDoseTime}`);
-      const doseTime = addHours(baseTime, i * intervalHours);
+      const doseTime = addHours(baseTime, i * medicationFrequency.intervalHours);
       schedule.push({
         id: `time-${i}`,
         time: format(doseTime, 'HH:mm'),
@@ -51,7 +51,7 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
       dosage,
       instructions,
       schedule,
-      frequency: frequency as 'daily' | 'twice_daily' | 'thrice_daily' | 'every_hour',
+      frequency: medicationFrequency,
     });
 
     setName("");
