@@ -209,10 +209,19 @@ const Index = () => {
       const medication = medications.find(med => med.id === id);
       if (!medication) return;
 
-      const { error } = await supabase
+      const { error: scheduleError } = await supabase
         .from('medication_schedules')
         .update({ taken: true })
         .eq('medication_id', id);
+
+      if (scheduleError) throw scheduleError;
+
+      const { error } = await supabase.functions.invoke('schedule-next-dose', {
+        body: {
+          medicationId: id,
+          currentDose: new Date().toISOString(),
+        },
+      });
 
       if (error) throw error;
 
@@ -292,7 +301,7 @@ const Index = () => {
     .sort((a, b) => new Date(a.nextDose).getTime() - new Date(b.nextDose).getTime());
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background dark:bg-gray-900">
       <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center">
           <div className="flex items-center space-x-4">
@@ -317,8 +326,13 @@ const Index = () => {
               variant="ghost"
               size="icon"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="w-10 h-10 rounded-full"
             >
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5 text-yellow-500" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
             </Button>
             <UserSettingsDialog onSave={handleSaveSettings} />
           </div>

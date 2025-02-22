@@ -72,7 +72,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           dosage: string
-          frequency: string
+          frequency?: string
           id?: string
           instructions?: string | null
           name: string

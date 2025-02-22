@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import type { Medication, TimeSlot } from "@/types/medication";
 import { addHours, format } from "date-fns";
@@ -16,18 +17,26 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [timesPerDay, setTimesPerDay] = useState(1);
+  const [frequency, setFrequency] = useState("daily");
   const [firstDoseTime, setFirstDoseTime] = useState("");
   const [open, setOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const intervalHours = 24 / timesPerDay;
+    const frequencyMap = {
+      'daily': 24,
+      'twice_daily': 12,
+      'thrice_daily': 8,
+      'every_hour': 1,
+    };
+    
+    const intervalHours = frequencyMap[frequency as keyof typeof frequencyMap];
     const schedule: TimeSlot[] = [];
     
     // Generate all dose times based on first dose and frequency
-    for (let i = 0; i < timesPerDay; i++) {
+    const totalDoses = 24 / intervalHours;
+    for (let i = 0; i < totalDoses; i++) {
       const baseTime = new Date(`2000-01-01T${firstDoseTime}`);
       const doseTime = addHours(baseTime, i * intervalHours);
       schedule.push({
@@ -42,16 +51,13 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
       dosage,
       instructions,
       schedule,
-      frequency: {
-        timesPerDay,
-        intervalHours,
-      },
+      frequency: frequency as 'daily' | 'twice_daily' | 'thrice_daily' | 'every_hour',
     });
 
     setName("");
     setDosage("");
     setInstructions("");
-    setTimesPerDay(1);
+    setFrequency("daily");
     setFirstDoseTime("");
     setOpen(false);
   };
@@ -59,7 +65,7 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-primary hover:bg-primary-600">
+        <Button>
           <Plus className="w-4 h-4 mr-2" />
           Add Medication
         </Button>
@@ -76,7 +82,6 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full"
             />
           </div>
           <div className="space-y-2">
@@ -86,21 +91,21 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
               value={dosage}
               onChange={(e) => setDosage(e.target.value)}
               required
-              className="w-full"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="timesPerDay">Times per Day</Label>
-            <Input
-              id="timesPerDay"
-              type="number"
-              min="1"
-              max="24"
-              value={timesPerDay}
-              onChange={(e) => setTimesPerDay(parseInt(e.target.value))}
-              required
-              className="w-full"
-            />
+            <Label htmlFor="frequency">Frequency</Label>
+            <Select value={frequency} onValueChange={setFrequency}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select frequency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Once daily</SelectItem>
+                <SelectItem value="twice_daily">Twice daily (every 12 hours)</SelectItem>
+                <SelectItem value="thrice_daily">Three times daily (every 8 hours)</SelectItem>
+                <SelectItem value="every_hour">Every hour</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="firstDoseTime">First Dose Time</Label>
@@ -110,7 +115,6 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
               value={firstDoseTime}
               onChange={(e) => setFirstDoseTime(e.target.value)}
               required
-              className="w-full"
             />
           </div>
           <div className="space-y-2">
@@ -119,10 +123,9 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
               id="instructions"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              className="w-full"
             />
           </div>
-          <Button type="submit" className="w-full bg-primary hover:bg-primary-600">
+          <Button type="submit" className="w-full">
             Save Medication
           </Button>
         </form>
