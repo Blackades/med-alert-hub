@@ -29,20 +29,16 @@ serve(async (req) => {
 
     console.log(`Processing medication ID: ${medicationId}, Current dose: ${currentDose}`);
 
-    // Fetch medication details with error handling
+    // First, fetch just the medication to ensure it exists
     const { data: medication, error: medError } = await supabase
       .from('medications')
-      .select('*, medication_schedules(*)')
+      .select('*')
       .eq('id', medicationId)
       .single();
 
-    if (medError) {
+    if (medError || !medication) {
       console.error("Error fetching medication:", medError);
-      throw medError;
-    }
-
-    if (!medication) {
-      throw new Error(`No medication found with ID: ${medicationId}`);
+      throw new Error("Medication not found");
     }
 
     console.log("Fetched medication:", medication);
@@ -55,27 +51,57 @@ serve(async (req) => {
     const nextDoseTime = addHours(parseISO(currentDose), intervalHours);
     console.log(`Calculated next dose time: ${nextDoseTime.toISOString()}`);
 
-    // Update medication schedule
-    if (!medication.medication_schedules || medication.medication_schedules.length === 0) {
-      console.error("No medication schedules found");
-      throw new Error("No medication schedules found for this medication");
-    }
-
-    const scheduleId = medication.medication_schedules[0].id;
-    const { error: updateError } = await supabase
+    // Fetch existing schedule or create new one
+    const { data: schedules, error: scheduleError } = await supabase
       .from('medication_schedules')
-      .update({ 
-        next_dose: nextDoseTime.toISOString(),
-        taken: true 
-      })
-      .eq('id', scheduleId);
+      .select('*')
+      .eq('medication_id', medicationId);
 
-    if (updateError) {
-      console.error("Error updating schedule:", updateError);
-      throw updateError;
+    if (scheduleError) {
+      console.error("Error fetching schedules:", scheduleError);
+      throw scheduleError;
     }
 
-    // Schedule next notification if needed
+    let scheduleId;
+
+    if (!schedules || schedules.length === 0) {
+      // Create new schedule if none exists
+      const { data: newSchedule, error: createError } = await supabase
+        .from('medication_schedules')
+        .insert({
+          medication_id: medicationId,
+          scheduled_time: nextDoseTime.toISOString().split('T')[1].split('.')[0],
+          next_dose: nextDoseTime.toISOString(),
+          taken: true
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Error creating schedule:", createError);
+        throw createError;
+      }
+
+      scheduleId = newSchedule.id;
+    } else {
+      // Update existing schedule
+      const { error: updateError } = await supabase
+        .from('medication_schedules')
+        .update({
+          next_dose: nextDoseTime.toISOString(),
+          taken: true
+        })
+        .eq('id', schedules[0].id);
+
+      if (updateError) {
+        console.error("Error updating schedule:", updateError);
+        throw updateError;
+      }
+
+      scheduleId = schedules[0].id;
+    }
+
+    // Schedule next notification
     const { error: notificationError } = await supabase
       .from('notifications')
       .insert({
@@ -91,15 +117,15 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         nextDose: nextDoseTime.toISOString(),
         message: "Successfully scheduled next dose"
       }),
       {
-        headers: { 
-          ...corsHeaders, 
-          "Content-Type": "application/json" 
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
         },
         status: 200,
       }
@@ -109,14 +135,14 @@ serve(async (req) => {
     console.error("Error in schedule-next-dose function:", error);
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error.message || "An unexpected error occurred",
         success: false
       }),
       {
-        headers: { 
-          ...corsHeaders, 
-          "Content-Type": "application/json" 
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
         },
         status: 500,
       }
