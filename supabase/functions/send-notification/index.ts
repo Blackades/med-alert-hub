@@ -1,12 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
-import { createClient } from "npm:@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +10,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -21,49 +18,48 @@ serve(async (req) => {
   try {
     const { email, medication, dosage, scheduledTime } = await req.json();
 
-    // Fetch user's phone number from profiles
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('phone_number')
-      .eq('email', email)
-      .single();
+    if (!email || !medication || !dosage || !scheduledTime) {
+      throw new Error("Missing required parameters");
+    }
 
-    if (profileError) throw profileError;
+    console.log(`Sending notification to ${email} for medication: ${medication}`);
 
-    // Send email notification
-    const { error: emailError } = await resend.emails.send({
-      from: "Med Alert Hub <onboarding@resend.dev>",
-      to: email,
-      subject: `Time to take ${medication}`,
+    const emailResponse = await resend.emails.send({
+      from: "MedAlert <onboarding@resend.dev>",
+      to: [email],
+      subject: `Time to take your medication: ${medication}`,
       html: `
-        <h1>Medication Reminder</h1>
-        <p>It's time to take your medication:</p>
-        <ul>
-          <li>Medication: ${medication}</li>
-          <li>Dosage: ${dosage}</li>
-          <li>Scheduled Time: ${scheduledTime}</li>
-        </ul>
-        <p>Please take your medication as prescribed.</p>
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h1 style="color: #0f172a;">Medication Reminder</h1>
+          <p>It's time to take your medication:</p>
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Medication:</strong> ${medication}</p>
+            <p><strong>Dosage:</strong> ${dosage}</p>
+            <p><strong>Scheduled Time:</strong> ${scheduledTime}</p>
+          </div>
+          <p>Please make sure to take your medication as prescribed.</p>
+          <p style="color: #64748b; font-size: 14px;">This is an automated reminder from MedAlert.</p>
+        </div>
       `,
     });
 
-    if (emailError) throw emailError;
+    console.log("Email sent successfully:", emailResponse);
 
-    // If phone number exists, send SMS notification
-    if (profileData?.phone_number) {
-      // Note: You'll need to implement SMS sending logic here
-      // using a service like Twilio, MessageBird, or similar
-      console.log(`Would send SMS to ${profileData.phone_number}`);
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({ success: true, message: "Notification sent successfully" }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    console.error("Error sending notification:", error);
+    return new Response(
+      JSON.stringify({ error: error.message || "Failed to send notification" }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 });
