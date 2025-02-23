@@ -28,24 +28,30 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          last_taken_at: string | null
           medication_id: string
           next_dose: string
+          next_reminder_at: string | null
           scheduled_time: string
           taken: boolean | null
         }
         Insert: {
           created_at?: string | null
           id?: string
+          last_taken_at?: string | null
           medication_id: string
           next_dose: string
+          next_reminder_at?: string | null
           scheduled_time: string
           taken?: boolean | null
         }
         Update: {
           created_at?: string | null
           id?: string
+          last_taken_at?: string | null
           medication_id?: string
           next_dose?: string
+          next_reminder_at?: string | null
           scheduled_time?: string
           taken?: boolean | null
         }
@@ -151,6 +157,13 @@ export type Database = {
         Args: {
           p_current_time: string
           p_scheduled_time: string
+        }
+        Returns: string
+      }
+      calculate_next_reminder: {
+        Args: {
+          p_frequency: string
+          p_last_taken: string
         }
         Returns: string
       }

@@ -10,28 +10,29 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { email, medication, dosage, scheduledTime } = await req.json();
+    const { email, medication, dosage, scheduledTime, isReminder } = await req.json();
 
     if (!email || !medication || !dosage || !scheduledTime) {
       throw new Error("Missing required parameters");
     }
 
-    console.log(`Sending notification to ${email} for medication: ${medication}`);
+    console.log(`Sending ${isReminder ? 'reminder' : 'confirmation'} to ${email} for medication: ${medication}`);
 
     const emailResponse = await resend.emails.send({
       from: "MedAlert <onboarding@resend.dev>",
       to: [email],
-      subject: `Time to take your medication: ${medication}`,
-      html: `
+      subject: isReminder 
+        ? `Reminder: Time to take ${medication} at ${scheduledTime}`
+        : `Confirmation: ${medication} taken`,
+      html: isReminder ? `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h1 style="color: #0f172a;">Medication Reminder</h1>
-          <p>It's time to take your medication:</p>
+          <h1 style="color: #0f172a;">Upcoming Medication Reminder</h1>
+          <p>This is a reminder that you need to take your medication in 15 minutes:</p>
           <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
             <p><strong>Medication:</strong> ${medication}</p>
             <p><strong>Dosage:</strong> ${dosage}</p>
@@ -39,6 +40,17 @@ serve(async (req) => {
           </div>
           <p>Please make sure to take your medication as prescribed.</p>
           <p style="color: #64748b; font-size: 14px;">This is an automated reminder from MedAlert.</p>
+        </div>
+      ` : `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h1 style="color: #0f172a;">Medication Taken</h1>
+          <p>This confirms that you've taken your medication:</p>
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Medication:</strong> ${medication}</p>
+            <p><strong>Dosage:</strong> ${dosage}</p>
+            <p><strong>Time Taken:</strong> ${scheduledTime}</p>
+          </div>
+          <p style="color: #64748b; font-size: 14px;">This is an automated confirmation from MedAlert.</p>
         </div>
       `,
     });

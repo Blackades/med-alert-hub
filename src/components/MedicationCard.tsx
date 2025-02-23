@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Check, X, Trash2 } from "lucide-react";
 import type { MedicationWithStatus } from "@/types/medication";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 interface MedicationCardProps {
   medication: MedicationWithStatus;
@@ -28,6 +28,8 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
     taken: "bg-green-500"
   };
 
+  const nextDoseTime = medication.nextDose ? format(parseISO(medication.nextDose), 'h:mm a') : 'N/A';
+
   return (
     <Card className={`p-6 transition-all duration-300 transform hover:shadow-lg ${
       isAnimating ? 'scale-95' : ''
@@ -43,7 +45,7 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
         <div className="flex items-center space-x-2">
           <Clock className="w-4 h-4 text-gray-400" />
           <span className="text-sm font-medium dark:text-gray-300">
-            {format(new Date(medication.nextDose), 'h:mm a')}
+            {nextDoseTime}
           </span>
         </div>
       </div>
