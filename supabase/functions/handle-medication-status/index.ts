@@ -43,7 +43,13 @@ serve(async (req) => {
       'every_hour': 1
     }[medication.frequency] || 24;
 
-    nextReminderTime = new Date(now.getTime() + intervalHours * 60 * 60 * 1000);
+    // Calculate the next reminder time by adding the interval to the current time
+    nextReminderTime = new Date(now.getTime());
+    nextReminderTime.setHours(nextReminderTime.getHours() + intervalHours);
+
+    console.log(`Current time: ${now.toISOString()}`);
+    console.log(`Next reminder set for: ${nextReminderTime.toISOString()}`);
+    console.log(`Interval hours: ${intervalHours}`);
 
     // Update medication schedule
     const { error: updateError } = await supabase
@@ -77,7 +83,7 @@ serve(async (req) => {
             email: userData.email,
             medication: medication.name,
             dosage: medication.dosage,
-            scheduledTime: now.toLocaleTimeString(),
+            scheduledTime: nextReminderTime.toLocaleTimeString(),
             isReminder: false
           }),
         });
