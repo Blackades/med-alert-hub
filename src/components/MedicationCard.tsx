@@ -1,10 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Check, X, Trash2 } from "lucide-react";
 import type { MedicationWithStatus } from "@/types/medication";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isFuture } from "date-fns";
 
 interface MedicationCardProps {
   medication: MedicationWithStatus;
@@ -15,6 +15,25 @@ interface MedicationCardProps {
 
 export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: MedicationCardProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
+  const [canTake, setCanTake] = useState(false);
+
+  useEffect(() => {
+    const checkCanTake = () => {
+      if (!medication.nextDose) return false;
+      const nextDoseTime = new Date(medication.nextDose);
+      return !isFuture(nextDoseTime);
+    };
+
+    // Initial check
+    setCanTake(checkCanTake());
+
+    // Set up interval to check every minute
+    const interval = setInterval(() => {
+      setCanTake(checkCanTake());
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [medication.nextDose]);
 
   const handleTake = async () => {
     setIsAnimating(true);
@@ -25,7 +44,15 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
   const statusColors = {
     upcoming: "bg-primary",
     overdue: "bg-destructive",
-    taken: "bg-green-500"
+    taken: "bg-green-500",
+    missed: "bg-red-500"
+  };
+
+  const getStatusColor = () => {
+    if (medication.status === 'taken') return statusColors.taken;
+    if (medication.missed) return statusColors.missed;
+    if (medication.status === 'overdue') return statusColors.overdue;
+    return statusColors.upcoming;
   };
 
   const nextDoseTime = medication.nextDose ? format(parseISO(medication.nextDose), 'h:mm a') : 'N/A';
@@ -37,7 +64,7 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${statusColors[medication.status]}`} />
+            <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} />
             <h3 className="font-semibold text-lg dark:text-white">{medication.name}</h3>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">{medication.dosage}</p>
@@ -69,6 +96,7 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
           size="sm"
           className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700"
           onClick={() => onSkip(medication.id)}
+          disabled={medication.status === 'taken' || medication.missed}
         >
           <X className="w-4 h-4" />
           <span>Skip</span>
@@ -77,7 +105,7 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
           size="sm"
           className="flex items-center space-x-1"
           onClick={handleTake}
-          disabled={medication.status === 'taken'}
+          disabled={!canTake || medication.status === 'taken' || medication.missed}
         >
           <Check className="w-4 h-4" />
           <span>{medication.status === 'taken' ? 'Taken' : 'Take'}</span>

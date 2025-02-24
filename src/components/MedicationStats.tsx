@@ -26,6 +26,7 @@ export const MedicationStats = ({ medications }: MedicationStatsProps) => {
 
     let taken = 0;
     let missed = 0;
+    let skipped = 0;
 
     medications.forEach(medication => {
       const schedules = medication.schedule || [];
@@ -34,8 +35,10 @@ export const MedicationStats = ({ medications }: MedicationStatsProps) => {
         if (isWithinInterval(scheduleDate, { start: dayStart, end: dayEnd })) {
           if (schedule.taken) {
             taken++;
-          } else {
+          } else if (schedule.missed) {
             missed++;
+          } else if (schedule.skipped) {
+            skipped++;
           }
         }
       });
@@ -45,6 +48,7 @@ export const MedicationStats = ({ medications }: MedicationStatsProps) => {
       name: label,
       taken,
       missed,
+      skipped
     };
   });
 
@@ -59,6 +63,7 @@ export const MedicationStats = ({ medications }: MedicationStatsProps) => {
             <Tooltip />
             <Bar dataKey="taken" fill="#34D399" stackId="a" name="Taken" />
             <Bar dataKey="missed" fill="#FF6B6B" stackId="a" name="Missed" />
+            <Bar dataKey="skipped" fill="#FCD34D" stackId="a" name="Skipped" />
           </BarChart>
         </ResponsiveContainer>
       </div>

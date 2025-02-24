@@ -16,9 +16,12 @@ export type TimeSlot = {
   id: string;
   time: string;
   taken: boolean;
+  missed?: boolean;
+  skipped?: boolean;
 };
 
 export type MedicationWithStatus = Medication & {
   nextDose: string;
   status: 'upcoming' | 'overdue' | 'taken';
+  missed?: boolean;
 };
