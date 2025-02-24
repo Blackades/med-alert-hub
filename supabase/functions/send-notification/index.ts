@@ -17,11 +17,12 @@ serve(async (req) => {
   try {
     const { email, medication, dosage, scheduledTime, isReminder } = await req.json();
 
+    console.log(`Starting to send ${isReminder ? 'reminder' : 'confirmation'} email to ${email}`);
+    console.log('API Key exists:', !!Deno.env.get("RESEND_API_KEY"));
+
     if (!email || !medication || !dosage || !scheduledTime) {
       throw new Error("Missing required parameters");
     }
-
-    console.log(`Sending ${isReminder ? 'reminder' : 'confirmation'} to ${email} for medication: ${medication}`);
 
     const emailResponse = await resend.emails.send({
       from: "MedAlert <onboarding@resend.dev>",
@@ -58,16 +59,20 @@ serve(async (req) => {
     console.log("Email sent successfully:", emailResponse);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Notification sent successfully" }),
+      JSON.stringify({ success: true, message: "Email sent successfully" }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       }
     );
-  } catch (error: any) {
-    console.error("Error sending notification:", error);
+  } catch (error) {
+    console.error("Error sending email:", error);
+    console.error("Error details:", error.response?.body || error.message);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to send notification" }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.response?.body || "No additional details"
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,

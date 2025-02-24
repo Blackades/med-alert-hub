@@ -1,11 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { addHours, parseISO } from "npm:date-fns@2";
-
-const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,137 +8,90 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Parse the request body
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     const { medicationId, currentDose } = await req.json();
 
-    // Validate required parameters
-    if (!medicationId || !currentDose) {
-      throw new Error("Missing required parameters: medicationId or currentDose");
-    }
-
-    console.log(`Processing medication ID: ${medicationId}, Current dose: ${currentDose}`);
-
-    // First, fetch just the medication to ensure it exists
-    const { data: medication, error: medError } = await supabase
+    // Get medication details
+    const { data: medicationData, error: medicationError } = await supabase
       .from('medications')
-      .select('*')
+      .select(`
+        *,
+        medication_schedules (*)
+      `)
       .eq('id', medicationId)
       .single();
 
-    if (medError || !medication) {
-      console.error("Error fetching medication:", medError);
-      throw new Error("Medication not found");
-    }
+    if (medicationError) throw medicationError;
 
-    console.log("Fetched medication:", medication);
-
-    // Calculate next dose time based on frequency
-    const intervalHours = medication.frequency === 'daily' ? 24 :
-      medication.frequency === 'twice_daily' ? 12 :
-      medication.frequency === 'thrice_daily' ? 8 : 1;
-
-    const nextDoseTime = addHours(parseISO(currentDose), intervalHours);
-    console.log(`Calculated next dose time: ${nextDoseTime.toISOString()}`);
-
-    // Fetch existing schedule or create new one
-    const { data: schedules, error: scheduleError } = await supabase
-      .from('medication_schedules')
-      .select('*')
-      .eq('medication_id', medicationId);
-
-    if (scheduleError) {
-      console.error("Error fetching schedules:", scheduleError);
-      throw scheduleError;
-    }
-
-    let scheduleId;
-
-    if (!schedules || schedules.length === 0) {
-      // Create new schedule if none exists
-      const { data: newSchedule, error: createError } = await supabase
-        .from('medication_schedules')
-        .insert({
-          medication_id: medicationId,
-          scheduled_time: nextDoseTime.toISOString().split('T')[1].split('.')[0],
-          next_dose: nextDoseTime.toISOString(),
-          taken: true
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error("Error creating schedule:", createError);
-        throw createError;
-      }
-
-      scheduleId = newSchedule.id;
-    } else {
-      // Update existing schedule
-      const { error: updateError } = await supabase
-        .from('medication_schedules')
-        .update({
-          next_dose: nextDoseTime.toISOString(),
-          taken: true
-        })
-        .eq('id', schedules[0].id);
-
-      if (updateError) {
-        console.error("Error updating schedule:", updateError);
-        throw updateError;
-      }
-
-      scheduleId = schedules[0].id;
-    }
-
-    // Schedule next notification
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
-        medication_schedule_id: scheduleId,
-        user_id: medication.user_id,
-        status: 'pending',
-        scheduled_for: nextDoseTime.toISOString()
-      });
-
-    if (notificationError) {
-      console.error("Error creating notification:", notificationError);
-      // Don't throw here, as the main operation succeeded
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        nextDose: nextDoseTime.toISOString(),
-        message: "Successfully scheduled next dose"
-      }),
+    // Calculate next reminder time based on frequency
+    const { data: nextReminder, error: reminderError } = await supabase.rpc(
+      'calculate_next_reminder',
       {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        },
-        status: 200,
+        p_frequency: medicationData.frequency,
+        p_last_taken: currentDose
       }
     );
 
-  } catch (error: any) {
-    console.error("Error in schedule-next-dose function:", error);
+    if (reminderError) throw reminderError;
+
+    // Update medication schedule with next reminder
+    const { error: updateError } = await supabase
+      .from('medication_schedules')
+      .update({
+        taken: true,
+        last_taken_at: currentDose,
+        next_reminder_at: nextReminder
+      })
+      .eq('medication_id', medicationId);
+
+    if (updateError) throw updateError;
+
+    // Send confirmation email
+    const { data: userData } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', medicationData.user_id)
+      .single();
+
+    if (userData?.email) {
+      await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+        },
+        body: JSON.stringify({
+          email: userData.email,
+          medication: medicationData.name,
+          dosage: medicationData.dosage,
+          scheduledTime: new Date().toLocaleTimeString(),
+          isReminder: false
+        }),
+      });
+    }
 
     return new Response(
-      JSON.stringify({
-        error: error.message || "An unexpected error occurred",
-        success: false
-      }),
+      JSON.stringify({ success: true, nextReminder }),
       {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error("Error in schedule-next-dose:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       }
     );
