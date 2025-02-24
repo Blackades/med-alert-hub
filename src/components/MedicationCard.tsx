@@ -50,12 +50,14 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
 
   const getStatusColor = () => {
     if (medication.status === 'taken') return statusColors.taken;
-    if (medication.missed) return statusColors.missed;
+    if (medication.status === 'missed' || medication.missed) return statusColors.missed;
     if (medication.status === 'overdue') return statusColors.overdue;
     return statusColors.upcoming;
   };
 
   const nextDoseTime = medication.nextDose ? format(parseISO(medication.nextDose), 'h:mm a') : 'N/A';
+
+  const isMedicationMissed = medication.status === 'missed' || medication.missed;
 
   return (
     <Card className={`p-6 transition-all duration-300 transform hover:shadow-lg ${
@@ -96,7 +98,7 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
           size="sm"
           className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700"
           onClick={() => onSkip(medication.id)}
-          disabled={medication.status === 'taken' || medication.missed}
+          disabled={medication.status === 'taken' || isMedicationMissed}
         >
           <X className="w-4 h-4" />
           <span>Skip</span>
@@ -105,7 +107,7 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
           size="sm"
           className="flex items-center space-x-1"
           onClick={handleTake}
-          disabled={!canTake || medication.status === 'taken' || medication.missed}
+          disabled={!canTake || medication.status === 'taken' || isMedicationMissed}
         >
           <Check className="w-4 h-4" />
           <span>{medication.status === 'taken' ? 'Taken' : 'Take'}</span>

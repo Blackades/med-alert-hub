@@ -27,4 +27,5 @@ export type MedicationWithStatus = Medication & {
   status: 'upcoming' | 'overdue' | 'taken' | 'missed';
   lastTaken?: string;
   next_reminder_at?: string;
+  missed?: boolean; // Added this property
 };
