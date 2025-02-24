@@ -30,6 +30,7 @@ export type Database = {
           id: string
           last_taken_at: string | null
           medication_id: string
+          missed_doses: boolean | null
           next_dose: string
           next_reminder_at: string | null
           scheduled_time: string
@@ -40,6 +41,7 @@ export type Database = {
           id?: string
           last_taken_at?: string | null
           medication_id: string
+          missed_doses?: boolean | null
           next_dose: string
           next_reminder_at?: string | null
           scheduled_time: string
@@ -50,6 +52,7 @@ export type Database = {
           id?: string
           last_taken_at?: string | null
           medication_id?: string
+          missed_doses?: boolean | null
           next_dose?: string
           next_reminder_at?: string | null
           scheduled_time?: string
@@ -153,6 +156,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_mark_missed_doses: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       calculate_next_dose: {
         Args: {
           p_current_time: string

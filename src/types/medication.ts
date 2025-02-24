@@ -18,10 +18,13 @@ export type TimeSlot = {
   taken: boolean;
   missed?: boolean;
   skipped?: boolean;
+  next_reminder_at?: string;
+  last_taken_at?: string;
 };
 
 export type MedicationWithStatus = Medication & {
   nextDose: string;
-  status: 'upcoming' | 'overdue' | 'taken';
-  missed?: boolean;
+  status: 'upcoming' | 'overdue' | 'taken' | 'missed';
+  lastTaken?: string;
+  next_reminder_at?: string;
 };

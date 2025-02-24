@@ -2,7 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { MedicationWithStatus } from "@/types/medication";
-import { format, subDays, startOfDay, isWithinInterval } from "date-fns";
+import { format, subDays, startOfDay, isWithinInterval, parseISO } from "date-fns";
 
 interface MedicationStatsProps {
   medications: MedicationWithStatus[];
@@ -18,39 +18,35 @@ export const MedicationStats = ({ medications }: MedicationStatsProps) => {
     };
   }).reverse();
 
-  // Calculate statistics for each day
-  const data = daysOfWeek.map(({ date, label }) => {
+  const calculateDailyStats = (date: Date, meds: MedicationWithStatus[]) => {
     const dayStart = startOfDay(date);
     const dayEnd = new Date(dayStart);
     dayEnd.setDate(dayEnd.getDate() + 1);
 
-    let taken = 0;
-    let missed = 0;
-    let skipped = 0;
-
-    medications.forEach(medication => {
+    return meds.reduce((acc, medication) => {
       const schedules = medication.schedule || [];
       schedules.forEach(schedule => {
-        const scheduleDate = new Date(schedule.time);
+        if (!schedule.time) return;
+
+        const scheduleDate = parseISO(schedule.time);
         if (isWithinInterval(scheduleDate, { start: dayStart, end: dayEnd })) {
           if (schedule.taken) {
-            taken++;
+            acc.taken++;
           } else if (schedule.missed) {
-            missed++;
+            acc.missed++;
           } else if (schedule.skipped) {
-            skipped++;
+            acc.skipped++;
           }
         }
       });
-    });
+      return acc;
+    }, { taken: 0, missed: 0, skipped: 0 });
+  };
 
-    return {
-      name: label,
-      taken,
-      missed,
-      skipped
-    };
-  });
+  const data = daysOfWeek.map(({ date, label }) => ({
+    name: label,
+    ...calculateDailyStats(date, medications)
+  }));
 
   return (
     <Card className="p-6 animate-fade-in">
