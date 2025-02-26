@@ -2,9 +2,15 @@ import { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Check, X, Trash2, AlertTriangle } from "lucide-react";
-import { format, parseISO, isFuture, isPast, differenceInMinutes } from "date-fns";
+import { format, parseISO, differenceInMinutes } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+
+// Define a proper type for frequency
+interface FrequencyObject {
+  timesPerDay?: number;
+  intervalHours?: number;
+}
 
 export interface MedicationWithStatus {
   id: string;
@@ -13,7 +19,7 @@ export interface MedicationWithStatus {
   instructions?: string;
   nextDose: string; // ISO string
   status: 'upcoming' | 'due' | 'overdue' | 'taken' | 'missed' | 'skipped';
-  frequency: string; // Changed from object to string to fix the rendering issue
+  frequency: string | FrequencyObject; // Updated to allow both string and object
 }
 
 interface MedicationCardProps {
@@ -186,9 +192,9 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
     if (typeof medication.frequency === 'string') {
       return medication.frequency;
     }
-    // If frequency is an object (which appears to be causing the error)
+    // Handle when frequency is an object
     if (medication.frequency && typeof medication.frequency === 'object') {
-      const freq = medication.frequency as any;
+      const freq = medication.frequency as FrequencyObject;
       if (freq.timesPerDay) {
         return `${freq.timesPerDay} time${freq.timesPerDay > 1 ? 's' : ''} per day`;
       }
