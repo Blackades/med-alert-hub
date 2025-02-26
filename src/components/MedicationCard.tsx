@@ -13,7 +13,7 @@ export interface MedicationWithStatus {
   instructions?: string;
   nextDose: string; // ISO string
   status: 'upcoming' | 'due' | 'overdue' | 'taken' | 'missed' | 'skipped';
-  frequency: string;
+  frequency: string; // Changed from object to string to fix the rendering issue
 }
 
 interface MedicationCardProps {
@@ -181,6 +181,25 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
     return format(parseISO(medication.nextDose), 'h:mm a');
   };
 
+  // Format frequency string to ensure it's a string
+  const getFormattedFrequency = () => {
+    if (typeof medication.frequency === 'string') {
+      return medication.frequency;
+    }
+    // If frequency is an object (which appears to be causing the error)
+    if (medication.frequency && typeof medication.frequency === 'object') {
+      const freq = medication.frequency as any;
+      if (freq.timesPerDay) {
+        return `${freq.timesPerDay} time${freq.timesPerDay > 1 ? 's' : ''} per day`;
+      }
+      if (freq.intervalHours) {
+        return `Every ${freq.intervalHours} hour${freq.intervalHours > 1 ? 's' : ''}`;
+      }
+      return 'Custom schedule';
+    }
+    return '';
+  };
+
   // Determine if action buttons should be disabled
   const canTake = ['due', 'overdue', 'upcoming'].includes(medicationStatus);
   const canSkip = ['due', 'overdue', 'upcoming'].includes(medicationStatus);
@@ -200,7 +219,7 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">{medication.dosage}</p>
           {medication.frequency && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">{medication.frequency}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{getFormattedFrequency()}</p>
           )}
         </div>
         <div className="flex flex-col items-end">
