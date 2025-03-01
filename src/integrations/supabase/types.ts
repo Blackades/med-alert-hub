@@ -24,6 +24,41 @@ export type Database = {
         }
         Relationships: []
       }
+      medication_logs: {
+        Row: {
+          created_at: string
+          id: string
+          medication_id: string
+          scheduled_time: string
+          status: string
+          taken_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          medication_id: string
+          scheduled_time: string
+          status: string
+          taken_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          medication_id?: string
+          scheduled_time?: string
+          status?: string
+          taken_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_logs_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medication_schedules: {
         Row: {
           created_at: string | null
@@ -173,6 +208,67 @@ export type Database = {
           p_last_taken: string
         }
         Returns: string
+      }
+      generate_medication_schedules: {
+        Args: {
+          medication_id: string
+          first_dose_time: string
+          frequency: string
+        }
+        Returns: undefined
+      }
+      get_today_stats: {
+        Args: {
+          user_id: string
+        }
+        Returns: {
+          taken_count: number
+          missed_count: number
+          skipped_count: number
+          upcoming_count: number
+          overdue_count: number
+        }[]
+      }
+      get_upcoming_doses: {
+        Args: {
+          user_id: string
+          limit_count?: number
+        }
+        Returns: {
+          medication_id: string
+          medication_name: string
+          medication_dosage: string
+          medication_instructions: string
+          next_dose_time: string
+          status: string
+        }[]
+      }
+      get_weekly_adherence: {
+        Args: {
+          user_id: string
+        }
+        Returns: {
+          day_name: string
+          day_date: string
+          taken_count: number
+          missed_count: number
+          skipped_count: number
+          total_count: number
+        }[]
+      }
+      mark_dose_as_skipped: {
+        Args: {
+          p_medication_id: string
+          p_scheduled_time?: string
+        }
+        Returns: undefined
+      }
+      mark_dose_as_taken: {
+        Args: {
+          p_medication_id: string
+          p_scheduled_time?: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
