@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserSettingsDialogProps {
   onSave: (settings: { email: string; phoneNumber: string }) => void;
@@ -16,7 +17,9 @@ export const UserSettingsDialog = ({ onSave }: UserSettingsDialogProps) => {
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [open, setOpen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -41,6 +44,46 @@ export const UserSettingsDialog = ({ onSave }: UserSettingsDialogProps) => {
     e.preventDefault();
     onSave({ email, phoneNumber });
     setOpen(false);
+  };
+
+  const handleTestEmail = async () => {
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "Please enter an email address first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-notification', {
+        body: {
+          email: email,
+          medication: "Test Medication",
+          dosage: "1 pill",
+          scheduledTime: new Date().toLocaleTimeString(),
+          isReminder: true,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Test email sent",
+        description: `A test email has been sent to ${email}`,
+      });
+    } catch (error: any) {
+      console.error("Error sending test email:", error);
+      toast({
+        title: "Error sending test email",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -80,9 +123,20 @@ export const UserSettingsDialog = ({ onSave }: UserSettingsDialogProps) => {
               Include country code (e.g., +1 for US)
             </p>
           </div>
-          <Button type="submit" className="w-full">
-            Save Settings
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1">
+              Save Settings
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleTestEmail}
+              disabled={isSending}
+              className="flex-1"
+            >
+              {isSending ? "Sending..." : "Test Email"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
