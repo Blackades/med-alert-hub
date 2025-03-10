@@ -36,12 +36,7 @@ serve(async (req) => {
     const now = new Date();
 
     // Calculate next reminder based on frequency
-    const intervalHours = {
-      'daily': 24,
-      'twice_daily': 12,
-      'thrice_daily': 8,
-      'every_hour': 1
-    }[medication.frequency] || 24;
+    const intervalHours = getFrequencyHours(medication.frequency);
 
     // Calculate the next reminder time by adding the interval to the current time
     nextReminderTime = new Date(now.getTime());
@@ -49,7 +44,7 @@ serve(async (req) => {
 
     console.log(`Current time: ${now.toISOString()}`);
     console.log(`Next reminder set for: ${nextReminderTime.toISOString()}`);
-    console.log(`Interval hours: ${intervalHours}`);
+    console.log(`Frequency: ${medication.frequency}, Interval hours: ${intervalHours}`);
 
     // Update medication schedule
     const { error: updateError } = await supabase
@@ -111,3 +106,19 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to calculate interval hours based on frequency
+function getFrequencyHours(frequency: string): number {
+  switch (frequency) {
+    case 'daily':
+      return 24;
+    case 'twice_daily':
+      return 12;
+    case 'thrice_daily':
+      return 8;
+    case 'every_hour':
+      return 1;
+    default:
+      return 24;
+  }
+}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AddMedicationDialog } from "@/components/AddMedicationDialog";
 import { MedicationStats } from "@/components/MedicationStats";
@@ -77,6 +76,8 @@ const Index = () => {
 
   const addMedication = async (newMedication: Omit<Medication, "id">) => {
     try {
+      console.log("Adding medication with frequency:", newMedication.frequency);
+      
       const { data: medData, error: medError } = await supabase
         .from('medications')
         .insert({
@@ -84,7 +85,7 @@ const Index = () => {
           dosage: newMedication.dosage,
           instructions: newMedication.instructions,
           user_id: user?.id,
-          frequency: 'daily',
+          frequency: newMedication.frequency,
         })
         .select()
         .single();

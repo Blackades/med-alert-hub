@@ -35,7 +35,7 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
     const schedule: TimeSlot[] = [];
     
     // Generate all dose times based on first dose and frequency
-    const totalDoses = 24 / medicationFrequency.intervalHours;
+    const totalDoses = medicationFrequency.timesPerDay;
     for (let i = 0; i < totalDoses; i++) {
       const baseTime = new Date(`2000-01-01T${firstDoseTime}`);
       const doseTime = addHours(baseTime, i * medicationFrequency.intervalHours);
@@ -51,7 +51,7 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
       dosage,
       instructions,
       schedule,
-      frequency: medicationFrequency,
+      frequency: frequency, // Pass the raw frequency string instead of the mapped object
     });
 
     setName("");

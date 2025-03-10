@@ -10,6 +10,36 @@ export const calculateNextDose = (currentTime: Date, scheduledTime: string): str
     : nextDoseTime.toISOString();
 };
 
+export const getFrequencyHours = (frequency: string): number => {
+  switch (frequency) {
+    case 'daily':
+      return 24;
+    case 'twice_daily':
+      return 12;
+    case 'thrice_daily':
+      return 8;
+    case 'every_hour':
+      return 1;
+    default:
+      return 24;
+  }
+};
+
+export const getFrequencyDoses = (frequency: string): number => {
+  switch (frequency) {
+    case 'daily':
+      return 1;
+    case 'twice_daily':
+      return 2;
+    case 'thrice_daily':
+      return 3;
+    case 'every_hour':
+      return 24;
+    default:
+      return 1;
+  }
+};
+
 export const getMedicationStatus = (medication: Medication): MedicationWithStatus => {
   const now = new Date();
   const todayStr = format(now, "yyyy-MM-dd");

@@ -32,16 +32,20 @@ serve(async (req) => {
 
     if (medicationError) throw medicationError;
 
-    // Calculate next reminder time based on frequency
-    const { data: nextReminder, error: reminderError } = await supabase.rpc(
-      'calculate_next_reminder',
-      {
-        p_frequency: medicationData.frequency,
-        p_last_taken: currentDose
-      }
-    );
+    // Log the medication details for debugging
+    console.log("Medication data:", JSON.stringify(medicationData, null, 2));
+    console.log("Medication frequency:", medicationData.frequency);
 
-    if (reminderError) throw reminderError;
+    // Calculate next reminder time directly based on frequency
+    const intervalHours = getFrequencyHours(medicationData.frequency);
+    
+    const currentDoseDate = new Date(currentDose);
+    const nextReminderDate = new Date(currentDoseDate.getTime() + (intervalHours * 60 * 60 * 1000));
+    const nextReminder = nextReminderDate.toISOString();
+
+    console.log(`Current dose time: ${currentDoseDate.toISOString()}`);
+    console.log(`Next reminder calculated for: ${nextReminder}`);
+    console.log(`Using interval hours: ${intervalHours}`);
 
     // Update medication schedule with next reminder
     const { error: updateError } = await supabase
@@ -97,3 +101,19 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to calculate interval hours based on frequency
+function getFrequencyHours(frequency: string): number {
+  switch (frequency) {
+    case 'daily':
+      return 24;
+    case 'twice_daily':
+      return 12;
+    case 'thrice_daily':
+      return 8;
+    case 'every_hour':
+      return 1;
+    default:
+      return 24;
+  }
+}
