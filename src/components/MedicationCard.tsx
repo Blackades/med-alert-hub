@@ -27,9 +27,10 @@ interface MedicationCardProps {
   onTake: (id: string) => Promise<void>;
   onSkip: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  showActions?: boolean; // Added the showActions property here
 }
 
-export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: MedicationCardProps) => {
+export const MedicationCard = ({ medication, onTake, onSkip, onDelete, showActions = true }: MedicationCardProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [medicationStatus, setMedicationStatus] = useState(medication.status);
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
@@ -251,39 +252,41 @@ export const MedicationCard = ({ medication, onTake, onSkip, onDelete }: Medicat
         <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">{medication.instructions}</p>
       )}
 
-      <div className="mt-4 flex items-center justify-end space-x-2">
-        <Button
-          variant="destructive"
-          size="sm"
-          className="flex items-center space-x-1"
-          onClick={handleDelete}
-        >
-          <Trash2 className="w-4 h-4" />
-          <span>Delete</span>
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-          onClick={handleSkip}
-          disabled={!canSkip || medicationStatus === 'skipped'}
-        >
-          <X className="w-4 h-4" />
-          <span>{medicationStatus === 'skipped' ? 'Skipped' : 'Skip'}</span>
-        </Button>
-        <Button
-          size="sm"
-          className={cn(
-            "flex items-center space-x-1",
-            medicationStatus === 'taken' ? "bg-green-500 hover:bg-green-600" : ""
-          )}
-          onClick={handleTake}
-          disabled={!canTake || medicationStatus === 'taken'}
-        >
-          <Check className="w-4 h-4" />
-          <span>{medicationStatus === 'taken' ? 'Taken' : 'Take'}</span>
-        </Button>
-      </div>
+      {showActions && (
+        <div className="mt-4 flex items-center justify-end space-x-2">
+          <Button
+            variant="destructive"
+            size="sm"
+            className="flex items-center space-x-1"
+            onClick={handleDelete}
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Delete</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+            onClick={handleSkip}
+            disabled={!canSkip || medicationStatus === 'skipped'}
+          >
+            <X className="w-4 h-4" />
+            <span>{medicationStatus === 'skipped' ? 'Skipped' : 'Skip'}</span>
+          </Button>
+          <Button
+            size="sm"
+            className={cn(
+              "flex items-center space-x-1",
+              medicationStatus === 'taken' ? "bg-green-500 hover:bg-green-600" : ""
+            )}
+            onClick={handleTake}
+            disabled={!canTake || medicationStatus === 'taken'}
+          >
+            <Check className="w-4 h-4" />
+            <span>{medicationStatus === 'taken' ? 'Taken' : 'Take'}</span>
+          </Button>
+        </div>
+      )}
     </Card>
   );
 };
