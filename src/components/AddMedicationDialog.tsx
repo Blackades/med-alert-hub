@@ -7,13 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Calendar, Pills } from "lucide-react";
+import { Plus, Calendar, Pill } from "lucide-react";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addHours, format } from "date-fns";
-import { MedicationType, TimeSlot } from "@/types/medication";
+import { Medication, MedicationType, TimeSlot } from "@/types/medication";
 import { MEDICATION_TYPES, createDefaultSchedule } from "@/utils/MedicationUtils";
 
 const frequencyOptions = [
