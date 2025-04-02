@@ -24,6 +24,53 @@ export type Database = {
         }
         Relationships: []
       }
+      medication_inventory: {
+        Row: {
+          created_at: string | null
+          current_quantity: number
+          dose_amount: number
+          id: string
+          last_refill_date: string | null
+          last_refill_quantity: number | null
+          last_updated: string | null
+          max_quantity: number | null
+          medication_id: string
+          refill_threshold: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_quantity?: number
+          dose_amount?: number
+          id?: string
+          last_refill_date?: string | null
+          last_refill_quantity?: number | null
+          last_updated?: string | null
+          max_quantity?: number | null
+          medication_id: string
+          refill_threshold?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          current_quantity?: number
+          dose_amount?: number
+          id?: string
+          last_refill_date?: string | null
+          last_refill_quantity?: number | null
+          last_updated?: string | null
+          max_quantity?: number | null
+          medication_id?: string
+          refill_threshold?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_inventory_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medication_logs: {
         Row: {
           created_at: string
@@ -52,6 +99,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "medication_logs_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medication_refill_logs: {
+        Row: {
+          created_at: string | null
+          id: string
+          medication_id: string
+          notes: string | null
+          quantity: number
+          refill_date: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          medication_id: string
+          notes?: string | null
+          quantity: number
+          refill_date?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          medication_id?: string
+          notes?: string | null
+          quantity?: number
+          refill_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_refill_logs_medication_id_fkey"
             columns: ["medication_id"]
             isOneToOne: false
             referencedRelation: "medications"
