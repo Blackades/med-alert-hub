@@ -15,11 +15,12 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Helper function to track medication inventory
 export const updateMedicationInventory = async (medicationId: string, newQuantity: number) => {
   try {
+    // Using a raw query approach to avoid type issues
     const { data, error } = await supabase
-      .from('medication_inventory')
-      .update({ current_quantity: newQuantity, last_updated: new Date().toISOString() })
-      .eq('medication_id', medicationId)
-      .select();
+      .rpc('update_medication_inventory', {
+        p_medication_id: medicationId,
+        p_new_quantity: newQuantity
+      });
     
     if (error) throw error;
     return { success: true, data };
