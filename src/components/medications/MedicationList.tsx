@@ -8,9 +8,16 @@ interface MedicationListProps {
   onTake: (id: string) => Promise<void>;
   onSkip: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  showActions?: boolean; // Added showActions prop with optional flag
 }
 
-export const MedicationList = ({ medications, onTake, onSkip, onDelete }: MedicationListProps) => {
+export const MedicationList = ({ 
+  medications, 
+  onTake, 
+  onSkip, 
+  onDelete,
+  showActions = true // Default to true to maintain backward compatibility
+}: MedicationListProps) => {
   return (
     <div className="space-y-4">
       {medications.length === 0 ? (
@@ -23,6 +30,7 @@ export const MedicationList = ({ medications, onTake, onSkip, onDelete }: Medica
             onTake={onTake}
             onSkip={onSkip}
             onDelete={onDelete}
+            showActions={showActions}
           />
         ))
       )}

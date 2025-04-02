@@ -11,9 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface UserSettingsDialogProps {
   onSave: (settings: { email: string; phoneNumber: string }) => void;
+  children?: React.ReactNode; // Added children prop
 }
 
-export const UserSettingsDialog = ({ onSave }: UserSettingsDialogProps) => {
+export const UserSettingsDialog = ({ onSave, children }: UserSettingsDialogProps) => {
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [open, setOpen] = useState(false);
@@ -89,9 +90,11 @@ export const UserSettingsDialog = ({ onSave }: UserSettingsDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon">
-          <Settings className="h-4 w-4" />
-        </Button>
+        {children || (
+          <Button variant="outline" size="icon">
+            <Settings className="h-4 w-4" />
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

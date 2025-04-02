@@ -50,9 +50,10 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface AddMedicationDialogProps {
   onAdd: (medication: Omit<Medication, "id">) => void;
+  children?: React.ReactNode; // Added children prop
 }
 
-export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
+export const AddMedicationDialog = ({ onAdd, children }: AddMedicationDialogProps) => {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
 
@@ -119,10 +120,12 @@ export const AddMedicationDialog = ({ onAdd }: AddMedicationDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Medication
-        </Button>
+        {children || (
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Medication
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
