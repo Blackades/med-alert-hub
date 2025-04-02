@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -20,6 +19,9 @@ const FREQUENCY_OPTIONS = {
   CUSTOM: 'custom'
 };
 
+// Helper for day calculations in weekly schedules
+const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -38,7 +40,8 @@ serve(async (req) => {
       .from('medications')
       .select(`
         *,
-        medication_schedules (*)
+        medication_schedules (*),
+        medication_schedule_days (*)
       `)
       .eq('id', medicationId)
       .single();
@@ -66,15 +69,130 @@ serve(async (req) => {
     } else if (medicationData.frequency === FREQUENCY_OPTIONS.EVERY_HOUR) {
       intervalHours = 1;
     } else if (medicationData.frequency === FREQUENCY_OPTIONS.WEEKLY) {
-      intervalHours = 24 * 7; // One week
-    } else if (medicationData.frequency === FREQUENCY_OPTIONS.MONTHLY) {
-      intervalHours = 24 * 30; // Approximate month
-    } else if (medicationData.frequency.startsWith('every_')) {
-      // Parse custom hour interval (e.g., "every_4" for every 4 hours)
-      const hours = parseInt(medicationData.frequency.split('_')[1]);
-      if (!isNaN(hours)) {
-        intervalHours = hours;
+      // For weekly schedules
+      const scheduleDays = medicationData.medication_schedule_days;
+      if (scheduleDays && scheduleDays.length > 0) {
+        // Find the next scheduled day
+        const today = new Date().getDay(); // 0-6, starting with Sunday
+        
+        // Sort the scheduled days by their numeric day values
+        const sortedDays = [...scheduleDays].sort((a, b) => {
+          const dayA = DAYS_OF_WEEK.indexOf(a.day.toLowerCase());
+          const dayB = DAYS_OF_WEEK.indexOf(b.day.toLowerCase());
+          return dayA - dayB;
+        });
+        
+        // Find the next day that is scheduled
+        let nextDayIndex = -1;
+        for (let i = 0; i < sortedDays.length; i++) {
+          const dayIndex = DAYS_OF_WEEK.indexOf(sortedDays[i].day.toLowerCase());
+          if (dayIndex > today) {
+            nextDayIndex = dayIndex;
+            break;
+          }
+        }
+        
+        // If no future day this week, take the first scheduled day
+        if (nextDayIndex === -1 && sortedDays.length > 0) {
+          nextDayIndex = DAYS_OF_WEEK.indexOf(sortedDays[0].day.toLowerCase());
+          // Calculate days to add (from today to next scheduled day next week)
+          const daysToAdd = (7 - today) + nextDayIndex;
+          nextReminderDate = new Date(nextReminderDate.setDate(nextReminderDate.getDate() + daysToAdd));
+        } else if (nextDayIndex !== -1) {
+          // Calculate days to add (from today to next scheduled day this week)
+          const daysToAdd = nextDayIndex - today;
+          nextReminderDate = new Date(nextReminderDate.setDate(nextReminderDate.getDate() + daysToAdd));
+        } else {
+          // Fallback to daily if no days are scheduled
+          nextReminderDate = new Date(currentDoseDate.getTime() + (24 * 60 * 60 * 1000));
+        }
+      } else {
+        // Default to 7 days if no specific days are set
+        nextReminderDate = new Date(currentDoseDate.getTime() + (7 * 24 * 60 * 60 * 1000));
       }
+      
+      // Keep the time component from current dose
+      nextReminderDate.setHours(
+        currentDoseDate.getHours(),
+        currentDoseDate.getMinutes(),
+        currentDoseDate.getSeconds(),
+        currentDoseDate.getMilliseconds()
+      );
+      
+      const nextReminder = nextReminderDate.toISOString();
+      console.log(`Next weekly reminder set for: ${nextReminder}`);
+      
+      // Update medication schedule with next reminder
+      const { error: updateError } = await supabase
+        .from('medication_schedules')
+        .update({
+          taken: true,
+          last_taken_at: currentDose,
+          next_reminder_at: nextReminder
+        })
+        .eq('medication_id', medicationId);
+
+      if (updateError) throw updateError;
+      
+      // Send confirmation email
+      await sendConfirmationEmail(supabase, medicationData);
+      
+      return new Response(
+        JSON.stringify({ success: true, nextReminder }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    } else if (medicationData.frequency === FREQUENCY_OPTIONS.MONTHLY) {
+      // For monthly schedules - calculate to the same day next month
+      nextReminderDate = new Date(currentDoseDate);
+      
+      // Get the current month and year
+      let month = nextReminderDate.getMonth();
+      let year = nextReminderDate.getFullYear();
+      
+      // Move to next month
+      month++;
+      if (month > 11) {
+        month = 0; // January
+        year++; // Next year
+      }
+      
+      // Set the next month
+      nextReminderDate.setMonth(month);
+      nextReminderDate.setFullYear(year);
+      
+      // Handle month length differences (e.g., Jan 31 -> Feb 28)
+      const currentDay = currentDoseDate.getDate();
+      const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+      nextReminderDate.setDate(Math.min(currentDay, lastDayOfMonth));
+      
+      const nextReminder = nextReminderDate.toISOString();
+      console.log(`Next monthly reminder set for: ${nextReminder}`);
+      
+      // Update medication schedule with next reminder
+      const { error: updateError } = await supabase
+        .from('medication_schedules')
+        .update({
+          taken: true,
+          last_taken_at: currentDose,
+          next_reminder_at: nextReminder
+        })
+        .eq('medication_id', medicationId);
+
+      if (updateError) throw updateError;
+      
+      // Send confirmation email
+      await sendConfirmationEmail(supabase, medicationData);
+      
+      return new Response(
+        JSON.stringify({ success: true, nextReminder }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     } else if (medicationData.frequency === FREQUENCY_OPTIONS.SPECIFIC_TIMES) {
       // For specific times, find the next time slot after the current one
       const schedules = medicationData.medication_schedules;
@@ -127,6 +245,12 @@ serve(async (req) => {
             status: 200,
           }
         );
+      }
+    } else if (medicationData.frequency.startsWith('every_')) {
+      // Parse custom hour interval (e.g., "every_4" for every 4 hours)
+      const hours = parseInt(medicationData.frequency.split('_')[1]);
+      if (!isNaN(hours)) {
+        intervalHours = hours;
       }
     }
     

@@ -38,7 +38,8 @@ serve(async (req) => {
       .from('medications')
       .select(`
         *,
-        medication_schedules (*)
+        medication_schedules (*),
+        medication_inventory (*)
       `)
       .eq('id', medicationId)
       .single();
@@ -129,6 +130,32 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
+    // If medication was taken, update inventory if it exists
+    if (action === 'take' && medication.medication_inventory) {
+      const inventory = medication.medication_inventory[0];
+      if (inventory && inventory.current_quantity !== null) {
+        const doseAmount = inventory.dose_amount || 1;
+        const newQuantity = Math.max(0, inventory.current_quantity - doseAmount);
+        
+        const { error: inventoryError } = await supabase
+          .from('medication_inventory')
+          .update({ 
+            current_quantity: newQuantity,
+            last_updated: now.toISOString()
+          })
+          .eq('medication_id', medicationId);
+          
+        if (inventoryError) {
+          console.error("Error updating inventory:", inventoryError);
+        }
+        
+        // Check if inventory is below threshold and send alert if needed
+        if (inventory.refill_threshold && newQuantity <= inventory.refill_threshold) {
+          await sendRefillAlert(supabase, medication, newQuantity);
+        }
+      }
+    }
+
     // If medication was taken, send confirmation email
     if (action === 'take') {
       await sendNotification(supabase, medication, false);
@@ -215,5 +242,36 @@ async function sendNotification(supabase, medication, isReminder = false, action
   } catch (emailError) {
     console.error("Error sending notification email:", emailError);
     // Don't throw the error, to avoid disrupting the main flow
+  }
+}
+
+// Helper function to send refill alert
+async function sendRefillAlert(supabase, medication, currentQuantity: number) {
+  try {
+    const { data: userData } = await supabase
+      .from('profiles')
+      .select('email, phone_number')
+      .eq('id', medication.user_id)
+      .single();
+
+    if (userData?.email) {
+      await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+        },
+        body: JSON.stringify({
+          email: userData.email,
+          medication: medication.name,
+          dosage: medication.dosage,
+          currentQuantity: currentQuantity,
+          isLowStockAlert: true,
+          phoneNumber: userData?.phone_number
+        }),
+      });
+    }
+  } catch (alertError) {
+    console.error("Error sending refill alert:", alertError);
   }
 }
