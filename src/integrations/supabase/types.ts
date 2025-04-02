@@ -352,6 +352,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_medication_inventory: {
+        Args: {
+          p_medication_id: string
+          p_new_quantity: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
