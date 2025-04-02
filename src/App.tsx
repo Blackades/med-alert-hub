@@ -5,6 +5,7 @@ import { BrowserRouter as Router } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/components/AuthProvider";
 import AppRoutes from "@/routes/AppRoutes";
+import "./App.css";
 
 const queryClient = new QueryClient();
 
@@ -14,8 +15,10 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <AppRoutes />
-            <Toaster />
+            <div className="min-h-screen flex flex-col">
+              <AppRoutes />
+              <Toaster />
+            </div>
           </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>
