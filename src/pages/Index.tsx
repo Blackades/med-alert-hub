@@ -57,21 +57,30 @@ const Index = () => {
 
       if (medsError) throw medsError;
 
+      if (!Array.isArray(medsData)) {
+        console.error("Expected array for medsData but got:", medsData);
+        setMedications([]);
+        return;
+      }
+
       const formattedMedications: Medication[] = medsData.map(med => ({
         id: med.id,
         name: med.name,
         dosage: med.dosage,
         instructions: med.instructions,
         frequency: med.frequency,
-        schedule: med.medication_schedules.map(schedule => ({
-          id: schedule.id,
-          time: schedule.scheduled_time,
-          taken: schedule.taken || false,
-        })),
+        schedule: Array.isArray(med.medication_schedules) 
+          ? med.medication_schedules.map(schedule => ({
+              id: schedule.id,
+              time: schedule.scheduled_time,
+              taken: schedule.taken || false,
+            }))
+          : [],
       }));
 
       setMedications(formattedMedications);
     } catch (error: any) {
+      console.error("Error in fetchMedications:", error);
       toast({
         title: "Error fetching medications",
         description: error.message,
@@ -261,9 +270,11 @@ const Index = () => {
     }
   };
 
-  const sortedMedications = medications
-    .map(getMedicationStatus)
-    .sort((a, b) => new Date(a.nextDose).getTime() - new Date(b.nextDose).getTime());
+  const sortedMedications = Array.isArray(medications) 
+    ? medications
+        .map(getMedicationStatus)
+        .sort((a, b) => new Date(a.nextDose).getTime() - new Date(b.nextDose).getTime())
+    : [];
 
   const healthTips = [
     "Stay hydrated! Drinking water helps medications absorb properly.",
