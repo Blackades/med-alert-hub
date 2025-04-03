@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AddMedicationDialog } from "@/components/AddMedicationDialog";
 import { MedicationStats } from "@/components/MedicationStats";
@@ -80,6 +79,8 @@ const Index = () => {
     try {
       console.log("Adding medication with frequency:", newMedication.frequency);
       
+      let frequency = newMedication.frequency;
+      
       const { data: medData, error: medError } = await supabase
         .from('medications')
         .insert({
@@ -87,12 +88,15 @@ const Index = () => {
           dosage: newMedication.dosage,
           instructions: newMedication.instructions,
           user_id: user?.id,
-          frequency: newMedication.frequency,
+          frequency: frequency,
         })
         .select()
         .single();
 
-      if (medError) throw medError;
+      if (medError) {
+        console.error("Error adding medication:", medError);
+        throw medError;
+      }
 
       const schedulePromises = newMedication.schedule.map(slot => 
         supabase
@@ -109,14 +113,16 @@ const Index = () => {
 
       await fetchMedications();
 
-      await supabase.functions.invoke('send-notification', {
-        body: {
-          email: user?.email,
-          medication: newMedication.name,
-          dosage: newMedication.dosage,
-          scheduledTime: newMedication.schedule[0].time,
-        },
-      });
+      if (user?.email) {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            email: user.email,
+            medication: newMedication.name,
+            dosage: newMedication.dosage,
+            scheduledTime: newMedication.schedule[0].time,
+          },
+        });
+      }
 
       toast({
         title: "Medication added",
@@ -124,9 +130,10 @@ const Index = () => {
         className: "bg-primary/10 border-primary",
       });
     } catch (error: any) {
+      console.error("Error details:", error);
       toast({
         title: "Error adding medication",
-        description: error.message,
+        description: error.message || "Failed to add medication",
         variant: "destructive",
       });
     }
@@ -253,7 +260,6 @@ const Index = () => {
     .map(getMedicationStatus)
     .sort((a, b) => new Date(a.nextDose).getTime() - new Date(b.nextDose).getTime());
 
-  // Display a health tip randomly
   const healthTips = [
     "Stay hydrated! Drinking water helps medications absorb properly.",
     "Store medications in a cool, dry place away from direct sunlight.",

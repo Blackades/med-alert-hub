@@ -1,1 +1,42 @@
+
 project_id = "bjgcteapggmoiaudmslb"
+
+[api]
+port = 54321
+schemas = ["public", "storage"]
+
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[auth]
+enabled = true
+
+[storage]
+enabled = true
+
+[realtime]
+enabled = true
+
+[functions.esp32-notifications]
+verify_jwt = false
+
+[functions.handle-medication-status]
+verify_jwt = true
+
+[functions.medication-refill]
+verify_jwt = true
+
+[functions.reset-medication-status]
+verify_jwt = true
+
+[functions.schedule-next-dose]
+verify_jwt = true
+
+[functions.send-notification]
+verify_jwt = true

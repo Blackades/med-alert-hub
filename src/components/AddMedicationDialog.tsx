@@ -50,7 +50,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface AddMedicationDialogProps {
   onAdd: (medication: Omit<Medication, "id">) => void;
-  children?: React.ReactNode; // Added children prop
+  children?: React.ReactNode;
 }
 
 export const AddMedicationDialog = ({ onAdd, children }: AddMedicationDialogProps) => {
@@ -94,13 +94,20 @@ export const AddMedicationDialog = ({ onAdd, children }: AddMedicationDialogProp
       default: dosesPerDay = 1;
     }
     
+    // Format frequency for database compatibility
+    // If it's a custom hours interval, format it properly
+    let frequencyValue = values.frequency;
+    if (values.frequency === "every_x_hours" && values.customHours) {
+      frequencyValue = `every_${values.customHours}`;
+    }
+    
     const newMedication = {
       name: values.name,
       dosage: values.dosage,
       medicationType: values.medicationType as MedicationType,
       instructions: values.instructions,
       schedule,
-      frequency: values.frequency,
+      frequency: frequencyValue,
       withFood: values.withFood,
       startDate: values.startDate,
       endDate: values.endDate,

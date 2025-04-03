@@ -19,26 +19,63 @@ serve(async (req) => {
   try {
     const now = new Date();
     
-    // Get pending notifications
-    const { data: notifications, error } = await supabase
-      .from('notifications')
+    // Query upcoming medications due in the next 15 minutes
+    const { data: upcomingMeds, error: upcomingError } = await supabase
+      .from('medication_schedules')
       .select(`
-        *,
-        medication_schedules (
-          scheduled_time,
-          medications (name, dosage)
+        id,
+        scheduled_time,
+        medication_id,
+        medications (
+          id,
+          name,
+          dosage,
+          instructions,
+          user_id
         )
       `)
-      .eq('status', 'pending');
-
-    if (error) throw error;
-
-    return new Response(JSON.stringify({ notifications }), {
+      .eq('taken', false)
+      .lte('next_dose', new Date(now.getTime() + 15 * 60000).toISOString()) // Next 15 minutes
+      .gte('next_dose', now.toISOString());
+      
+    if (upcomingError) throw upcomingError;
+    
+    if (upcomingMeds && upcomingMeds.length > 0) {
+      // Format the response for ESP32
+      const notifications = upcomingMeds.map(med => ({
+        id: med.id,
+        medication_name: med.medications.name,
+        dosage: med.medications.dosage,
+        instructions: med.medications.instructions,
+        scheduled_time: med.scheduled_time,
+        due_at: med.next_dose,
+        user_id: med.medications.user_id
+      }));
+      
+      return new Response(JSON.stringify({ 
+        status: 'success', 
+        timestamp: now.toISOString(),
+        notifications 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+    
+    return new Response(JSON.stringify({ 
+      status: 'success', 
+      timestamp: now.toISOString(),
+      notifications: [] 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Error in ESP32 notifications function:", error);
+    return new Response(JSON.stringify({ 
+      status: 'error', 
+      message: error.message || 'An error occurred'
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
