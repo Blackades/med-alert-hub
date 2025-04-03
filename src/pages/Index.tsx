@@ -10,10 +10,14 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MedicationList } from "@/components/medications/MedicationList";
+import { MedicationStreaks } from "@/components/streaks/MedicationStreaks";
+import { MoodTracker } from "@/components/mood/MoodTracker";
+import { MedicationCalendar } from "@/components/calendar/MedicationCalendar";
 import { getMedicationStatus, calculateNextDose } from "@/utils/MedicationUtils";
-import { PlusCircle, Calendar, Bell, Pill, ChevronDown, ArrowUpRight, Zap } from "lucide-react";
+import { PlusCircle, Calendar, Bell, Pill, ChevronDown, ArrowUpRight, Zap, BarChart4, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -22,6 +26,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showTips, setShowTips] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     if (!session) {
@@ -320,62 +325,91 @@ const Index = () => {
               </Card>
             )}
 
-            {sortedMedications.length > 0 && (
-              <div className="animate-fade-in">
-                <MedicationStats medications={sortedMedications} />
-              </div>
-            )}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid grid-cols-3 mb-4">
+                <TabsTrigger value="overview" className="flex items-center">
+                  <Gauge className="w-4 h-4 mr-2" />
+                  <span>Overview</span>
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <span>Calendar</span>
+                </TabsTrigger>
+                <TabsTrigger value="mood" className="flex items-center">
+                  <BarChart4 className="w-4 h-4 mr-2" />
+                  <span>Mood</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview" className="space-y-6 mt-0">
+                {sortedMedications.length > 0 && (
+                  <div className="animate-fade-in">
+                    <MedicationStats medications={sortedMedications} />
+                  </div>
+                )}
 
-            <div className="grid gap-6 md:grid-cols-2 animate-fade-up">
-              <Card className="glass-card overflow-hidden">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex justify-between items-center">
-                    <span className="flex items-center">
-                      <Calendar className="mr-2 h-5 w-5 text-primary" />
-                      Today's Schedule
-                    </span>
-                    <Button variant="ghost" size="sm" className="text-primary hover:text-primary/90 hover:bg-primary/10">
-                      View All
-                      <ArrowUpRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </CardTitle>
-                  <CardDescription>Your medication schedule for today</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-6">
-                  <MedicationList 
-                    medications={sortedMedications.filter(med => med.status === 'upcoming' || med.status === 'overdue')} 
-                    onTake={handleTakeMedication}
-                    onSkip={handleSkipMedication}
-                    onDelete={handleDeleteMedication}
-                  />
-                </CardContent>
-              </Card>
+                <div className="grid gap-6 md:grid-cols-2 animate-fade-up">
+                  <Card className="glass-card overflow-hidden">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex justify-between items-center">
+                        <span className="flex items-center">
+                          <Calendar className="mr-2 h-5 w-5 text-primary" />
+                          Today's Schedule
+                        </span>
+                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary/90 hover:bg-primary/10">
+                          View All
+                          <ArrowUpRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </CardTitle>
+                      <CardDescription>Your medication schedule for today</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pb-6">
+                      <MedicationList 
+                        medications={sortedMedications.filter(med => med.status === 'upcoming' || med.status === 'overdue')} 
+                        onTake={handleTakeMedication}
+                        onSkip={handleSkipMedication}
+                        onDelete={handleDeleteMedication}
+                      />
+                    </CardContent>
+                  </Card>
 
-              <Card className="glass-card overflow-hidden">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex justify-between items-center">
-                    <span className="flex items-center">
-                      <Pill className="mr-2 h-5 w-5 text-secondary" />
-                      Recent Medications
-                    </span>
-                    <Button variant="ghost" size="sm" className="text-secondary hover:text-secondary/90 hover:bg-secondary/10">
-                      View All
-                      <ArrowUpRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </CardTitle>
-                  <CardDescription>Medications you've recently taken</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-6">
-                  <MedicationList 
-                    medications={sortedMedications.filter(med => med.status === 'taken').slice(0, 3)} 
-                    onTake={handleTakeMedication}
-                    onSkip={handleSkipMedication}
-                    onDelete={handleDeleteMedication}
-                    showActions={false}
-                  />
-                </CardContent>
-              </Card>
-            </div>
+                  <Card className="glass-card overflow-hidden">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex justify-between items-center">
+                        <span className="flex items-center">
+                          <Pill className="mr-2 h-5 w-5 text-secondary" />
+                          Recent Medications
+                        </span>
+                        <Button variant="ghost" size="sm" className="text-secondary hover:text-secondary/90 hover:bg-secondary/10">
+                          View All
+                          <ArrowUpRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </CardTitle>
+                      <CardDescription>Medications you've recently taken</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pb-6">
+                      <MedicationList 
+                        medications={sortedMedications.filter(med => med.status === 'taken').slice(0, 3)} 
+                        onTake={handleTakeMedication}
+                        onSkip={handleSkipMedication}
+                        onDelete={handleDeleteMedication}
+                        showActions={false}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                <MedicationStreaks />
+              </TabsContent>
+              
+              <TabsContent value="calendar" className="mt-0">
+                <MedicationCalendar />
+              </TabsContent>
+              
+              <TabsContent value="mood" className="space-y-6 mt-0">
+                <MoodTracker />
+              </TabsContent>
+            </Tabs>
           </div>
 
           <Sidebar sidebarOpen={sidebarOpen} medications={sortedMedications} />

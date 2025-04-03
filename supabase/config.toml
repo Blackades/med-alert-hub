@@ -40,3 +40,9 @@ verify_jwt = true
 
 [functions.send-notification]
 verify_jwt = true
+
+[functions.medication-streaks]
+verify_jwt = true
+
+[functions.mood-tracker]
+verify_jwt = true
