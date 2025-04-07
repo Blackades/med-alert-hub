@@ -177,9 +177,11 @@ export const MedicationCalendar = () => {
                 customStyles: "custom-day-style",
               }}
               styles={{
-                day: (date) => {
-                  const dateStr = format(date, 'yyyy-MM-dd');
-                  return customDayClassNames[dateStr] || '';
+                day: {
+                  className: (date) => {
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    return customDayClassNames[dateStr] || '';
+                  }
                 }
               }}
             />
