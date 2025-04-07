@@ -29,6 +29,9 @@ export const MedicationCalendar = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   
+  // Add a state to track custom day styles
+  const [customDayClassNames, setCustomDayClassNames] = useState<Record<string, string>>({});
+  
   useEffect(() => {
     const fetchMedicationLogs = async () => {
       if (!user?.id) return;
@@ -96,27 +99,41 @@ export const MedicationCalendar = () => {
       }
       
       setDayStatus(newDayStatus);
+      
+      // Calculate and set custom class names based on day status
+      const newCustomDayClassNames: Record<string, string> = {};
+      
+      // Process each day in the month
+      const currentDate = new Date(startOfMonth);
+      while (currentDate <= endOfMonth) {
+        const dateStr = format(currentDate, 'yyyy-MM-dd');
+        const status = newDayStatus[dateStr];
+        
+        if (status) {
+          if (status.missed > 0) {
+            newCustomDayClassNames[dateStr] = 'bg-destructive/10 text-destructive font-medium hover:bg-destructive/20';
+          } else if (status.taken === status.total) {
+            newCustomDayClassNames[dateStr] = 'bg-primary/10 text-primary font-medium hover:bg-primary/20';
+          } else if (status.taken > 0) {
+            newCustomDayClassNames[dateStr] = 'bg-amber-500/10 text-amber-500 font-medium hover:bg-amber-500/20';
+          }
+        }
+        
+        // Move to the next day
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      setCustomDayClassNames(newCustomDayClassNames);
       setLoading(false);
     };
     
     fetchMedicationLogs();
   }, [user, date]);
   
-  const getDayColor = (day: Date): string | undefined => {
+  // Function to determine if a day has custom styling
+  const hasDayModifier = (day: Date): boolean => {
     const dateStr = format(day, 'yyyy-MM-dd');
-    const status = dayStatus[dateStr];
-    
-    if (!status) return undefined;
-    
-    if (status.missed > 0) {
-      return 'bg-destructive/10 text-destructive font-medium hover:bg-destructive/20';
-    } else if (status.taken === status.total) {
-      return 'bg-primary/10 text-primary font-medium hover:bg-primary/20';
-    } else if (status.taken > 0) {
-      return 'bg-amber-500/10 text-amber-500 font-medium hover:bg-amber-500/20';
-    }
-    
-    return undefined;
+    return Boolean(customDayClassNames[dateStr]);
   };
   
   return (
@@ -154,10 +171,16 @@ export const MedicationCalendar = () => {
               onSelect={(date) => date && setDate(date)}
               className="border rounded-md p-4"
               modifiers={{
-                customStyles: (date) => Boolean(getDayColor(date)),
+                customStyles: hasDayModifier,
               }}
               modifiersClassNames={{
-                customStyles: (date) => getDayColor(date) || "",
+                customStyles: "custom-day-style",
+              }}
+              styles={{
+                day: (date) => {
+                  const dateStr = format(date, 'yyyy-MM-dd');
+                  return customDayClassNames[dateStr] || '';
+                }
               }}
             />
             
