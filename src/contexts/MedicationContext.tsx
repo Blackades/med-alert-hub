@@ -245,7 +245,13 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
   const sortedMedications = Array.isArray(medications) 
     ? medications
         .map(getMedicationStatus)
-        .sort((a, b) => new Date(a.nextDose).getTime() - new Date(b.nextDose).getTime())
+        .sort((a, b) => {
+          // Check if nextDose exists and is a valid date
+          if (!a.nextDose) return 1;
+          if (!b.nextDose) return -1;
+          
+          return new Date(a.nextDose).getTime() - new Date(b.nextDose).getTime();
+        })
     : [];
 
   return (

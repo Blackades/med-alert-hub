@@ -75,23 +75,25 @@ export const MedicationCalendar = () => {
       // Process logs by day
       const newDayStatus: DayStatus = {};
       
-      logs?.forEach((log: MedicationLog) => {
-        const day = log.scheduled_time.split('T')[0];
-        
-        if (!newDayStatus[day]) {
-          newDayStatus[day] = { taken: 0, missed: 0, skipped: 0, total: 0 };
-        }
-        
-        newDayStatus[day].total++;
-        
-        if (log.status === 'taken') {
-          newDayStatus[day].taken++;
-        } else if (log.status === 'missed') {
-          newDayStatus[day].missed++;
-        } else if (log.status === 'skipped') {
-          newDayStatus[day].skipped++;
-        }
-      });
+      if (Array.isArray(logs)) {
+        logs.forEach((log: MedicationLog) => {
+          const day = log.scheduled_time.split('T')[0];
+          
+          if (!newDayStatus[day]) {
+            newDayStatus[day] = { taken: 0, missed: 0, skipped: 0, total: 0 };
+          }
+          
+          newDayStatus[day].total++;
+          
+          if (log.status === 'taken') {
+            newDayStatus[day].taken++;
+          } else if (log.status === 'missed') {
+            newDayStatus[day].missed++;
+          } else if (log.status === 'skipped') {
+            newDayStatus[day].skipped++;
+          }
+        });
+      }
       
       setDayStatus(newDayStatus);
       setLoading(false);
@@ -100,7 +102,7 @@ export const MedicationCalendar = () => {
     fetchMedicationLogs();
   }, [user, date]);
   
-  const getDayColor = (day: Date) => {
+  const getDayColor = (day: Date): string | undefined => {
     const dateStr = format(day, 'yyyy-MM-dd');
     const status = dayStatus[dateStr];
     
@@ -155,7 +157,7 @@ export const MedicationCalendar = () => {
                 customStyles: (date) => Boolean(getDayColor(date)),
               }}
               modifiersClassNames={{
-                customStyles: getDayColor,
+                customStyles: (date) => getDayColor(date) || "",
               }}
             />
             
