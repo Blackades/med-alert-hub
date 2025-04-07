@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { getMedicationStreaks } from "@/integrations/supabase/client";
+import { getMedicationStreaks } from "@/integrations/supabase/services/streaks";
 import { useAuth } from "@/components/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

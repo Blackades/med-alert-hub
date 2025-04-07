@@ -1,60 +1,55 @@
 
 import React from "react";
 import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent } from "@/components/ui/card";
 import { DaySummary } from "./DaySummary";
 import { CalendarLegend } from "./CalendarLegend";
+import { useMedicationCalendarData } from "./useMedicationCalendarData";
 import { format } from "date-fns";
-import { useMedicationCalendarData, DayStatus } from "./useMedicationCalendarData";
 
-type MedicationCalendarContentProps = {
+interface MedicationCalendarContentProps {
   date: Date;
   setDate: (date: Date) => void;
-};
+}
 
-export const MedicationCalendarContent = ({ date, setDate }: MedicationCalendarContentProps) => {
+export const MedicationCalendarContent: React.FC<MedicationCalendarContentProps> = ({ 
+  date, 
+  setDate 
+}) => {
   const { dayStatus, loading, customDayClassNames } = useMedicationCalendarData(date);
-
-  if (loading) {
-    return (
-      <div className="animate-pulse space-y-2">
-        <div className="h-4 bg-muted rounded w-3/4"></div>
-        <div className="h-[240px] bg-muted rounded mt-2"></div>
-      </div>
-    );
-  }
-
-  // Function to determine if a day has custom styling
-  const hasDayModifier = (day: Date): boolean => {
-    const dateStr = format(day, 'yyyy-MM-dd');
-    return Boolean(customDayClassNames[dateStr]);
-  };
-
+  
+  // Format selected date for display
+  const formattedDate = format(date, "MMMM d, yyyy");
+  
   return (
-    <>
-      <CalendarLegend />
-      
-      <Calendar
-        mode="single"
-        selected={date}
-        onSelect={(newDate) => newDate && setDate(newDate)}
-        className="border rounded-md p-4"
-        modifiers={{
-          customStyles: hasDayModifier,
-        }}
-        modifiersClassNames={{
-          customStyles: "custom-day-style",
-        }}
-        styles={{
-          day: {
-            className: (day) => {
-              const dateStr = format(day, 'yyyy-MM-dd');
-              return customDayClassNames[dateStr] || '';
-            }
-          }
-        }}
-      />
-      
-      <DaySummary date={date} dayStatus={dayStatus} />
-    </>
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row gap-6">
+        <Card className="flex-1">
+          <CardContent className="pt-6">
+            <CalendarLegend />
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={(newDate) => newDate && setDate(newDate)}
+              className="rounded-md border mx-auto"
+              modifiersClassNames={{
+                ...customDayClassNames
+              }}
+            />
+          </CardContent>
+        </Card>
+        
+        <Card className="flex-1">
+          <CardContent className="pt-6">
+            <h3 className="font-medium mb-4">{formattedDate}</h3>
+            <DaySummary 
+              date={date} 
+              dayStatus={dayStatus} 
+              isLoading={loading} 
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
