@@ -155,7 +155,7 @@ export const MedicationCalendar = () => {
                 customStyles: (date) => Boolean(getDayColor(date)),
               }}
               modifiersClassNames={{
-                customStyles: (date) => getDayColor(date) || '',
+                customStyles: getDayColor,
               }}
             />
             

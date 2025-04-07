@@ -7,7 +7,7 @@ export const useUserSettings = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const saveSettings = async (settings: { email: string; phoneNumber: string }) => {
+  const saveSettings = async (settings: { email: string; phoneNumber: string }): Promise<void> => {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -23,16 +23,12 @@ export const useUserSettings = () => {
         title: "Settings saved",
         description: `Notifications will be sent to ${settings.email} and ${settings.phoneNumber}`,
       });
-      
-      return true;
     } catch (error: any) {
       toast({
         title: "Error saving settings",
         description: error.message,
         variant: "destructive",
       });
-      
-      return false;
     }
   };
 
