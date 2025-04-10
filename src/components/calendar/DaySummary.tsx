@@ -3,6 +3,7 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type DayStatus = {
   taken: number;
@@ -14,11 +15,24 @@ type DayStatus = {
 type DaySummaryProps = {
   date: Date;
   dayStatus: Record<string, DayStatus>;
+  isLoading?: boolean;
 };
 
-export const DaySummary = ({ date, dayStatus }: DaySummaryProps) => {
+export const DaySummary = ({ date, dayStatus, isLoading = false }: DaySummaryProps) => {
   const dateStr = format(date, 'yyyy-MM-dd');
   const status = dayStatus[dateStr];
+
+  if (isLoading) {
+    return (
+      <div className="mt-4">
+        <h4 className="font-medium mb-2">{format(date, 'MMMM d, yyyy')}</h4>
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   if (!status) {
     return (
