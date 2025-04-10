@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getMedicationStreaks } from "@/integrations/supabase/services/streaks";
 import { useAuth } from "@/components/AuthProvider";
@@ -27,7 +28,10 @@ export const MedicationStreaks = () => {
       const { success, data } = await getMedicationStreaks(user.id);
       
       if (success && data) {
-        setStreaks(data);
+        // Ensure data is an array before setting it
+        setStreaks(Array.isArray(data) ? data : []);
+      } else {
+        setStreaks([]);
       }
       setLoading(false);
     };
@@ -65,9 +69,12 @@ export const MedicationStreaks = () => {
   }
 
   // Find the medication with the highest current streak
-  const topStreak = streaks.reduce((prev, current) => 
-    (current.currentStreak > prev.currentStreak) ? current : prev
-  , streaks[0]);
+  // Only try to find topStreak if we have streaks
+  const topStreak = streaks.length > 0 
+    ? streaks.reduce((prev, current) => 
+        (current.currentStreak > prev.currentStreak) ? current : prev
+      , streaks[0])
+    : { currentStreak: 0 };
 
   return (
     <Card className="overflow-hidden">

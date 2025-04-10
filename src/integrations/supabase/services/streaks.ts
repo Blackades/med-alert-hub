@@ -13,7 +13,10 @@ export const getMedicationStreaks = async (userId: string) => {
       throw new Error(response.error.message || 'Failed to fetch medication streaks');
     }
     
-    return { success: true, data: response.data };
+    // Ensure data is an array
+    const streaksData = Array.isArray(response.data) ? response.data : [];
+    
+    return { success: true, data: streaksData };
   } catch (error) {
     console.error('Error fetching medication streaks:', error);
     toast({
@@ -21,6 +24,6 @@ export const getMedicationStreaks = async (userId: string) => {
       description: "Could not load medication streak information.",
       variant: "destructive",
     });
-    return { success: false, error };
+    return { success: false, error, data: [] };
   }
 };
