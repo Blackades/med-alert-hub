@@ -16,3 +16,4 @@ export * from './services/medication-status';
 export * from './services/notifications';
 export * from './services/mood';
 export * from './services/streaks';
+export * from './services/demo';

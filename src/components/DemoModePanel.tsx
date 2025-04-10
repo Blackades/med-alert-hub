@@ -1,0 +1,142 @@
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
+import { useMedications } from "@/contexts/MedicationContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Mail, Smartphone, Info } from "lucide-react";
+
+export const DemoModePanel = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { medications } = useMedications();
+  const [selectedMedication, setSelectedMedication] = useState<string>("");
+  const [notificationType, setNotificationType] = useState<string>("email");
+  const [isLoading, setIsLoading] = useState(false);
+  const [esp32Data, setEsp32Data] = useState<any>(null);
+
+  const handleTriggerDemo = async () => {
+    if (!selectedMedication) {
+      toast({
+        title: "Error",
+        description: "Please select a medication first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('demo-notification', {
+        body: {
+          userId: user?.id,
+          medicationId: selectedMedication,
+          notificationType: notificationType
+        },
+      });
+
+      if (error) throw error;
+
+      if (notificationType === 'esp32' || notificationType === 'both') {
+        setEsp32Data(data.notifications || data.esp32Data?.notifications || []);
+      }
+
+      toast({
+        title: "Demo Triggered",
+        description: `Successfully triggered ${notificationType} notification demo`,
+      });
+    } catch (error: any) {
+      console.error("Error triggering demo:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to trigger demo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card className="mb-6 bg-slate-50 border-dashed border-slate-300">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Info className="h-5 w-5" /> Demo Mode
+        </CardTitle>
+        <CardDescription>
+          For demonstration purposes only - Trigger notifications on demand
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Select Medication</label>
+              <Select value={selectedMedication} onValueChange={setSelectedMedication}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a medication" />
+                </SelectTrigger>
+                <SelectContent>
+                  {medications.map((med) => (
+                    <SelectItem key={med.id} value={med.id}>
+                      {med.name} ({med.dosage})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-1 block">Notification Type</label>
+              <Tabs defaultValue="email" value={notificationType} onValueChange={setNotificationType}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" /> Email
+                  </TabsTrigger>
+                  <TabsTrigger value="esp32" className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" /> ESP32
+                  </TabsTrigger>
+                  <TabsTrigger value="both">Both</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            <Button 
+              onClick={handleTriggerDemo} 
+              disabled={isLoading || !selectedMedication}
+              className="mt-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Triggering...
+                </>
+              ) : (
+                "Trigger Demo Notification"
+              )}
+            </Button>
+          </div>
+
+          {esp32Data && esp32Data.length > 0 && (
+            <div className="mt-4 border rounded-md p-4 bg-white">
+              <h3 className="font-medium mb-2">ESP32 Notification Data:</h3>
+              <pre className="text-xs bg-slate-100 p-3 rounded overflow-auto max-h-40">
+                {JSON.stringify(esp32Data, null, 2)}
+              </pre>
+            </div>
+          )}
+          
+          {esp32Data && esp32Data.length === 0 && (
+            <div className="mt-4 border rounded-md p-4 bg-white">
+              <p className="text-sm text-muted-foreground">No pending ESP32 notifications found.</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
