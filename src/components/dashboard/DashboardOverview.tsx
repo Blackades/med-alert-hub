@@ -6,9 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { UserSettingsDialog } from "@/components/UserSettingsDialog";
 import { useUserSettings } from "@/components/dashboard/UserSettings";
 import { DemoModePanel } from "@/components/DemoModePanel";
+import { useMedications } from "@/contexts/MedicationContext";
 
 export const DashboardOverview = () => {
   const { saveSettings } = useUserSettings();
+  const { sortedMedications } = useMedications();
 
   return (
     <section className="grid gap-4 grid-cols-1 md:grid-cols-3">
@@ -23,7 +25,7 @@ export const DashboardOverview = () => {
             <UserSettingsDialog onSave={saveSettings} />
           </CardHeader>
           <CardContent>
-            <MedicationStats />
+            <MedicationStats medications={sortedMedications} />
           </CardContent>
         </Card>
         <Card>
