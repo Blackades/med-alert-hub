@@ -52,8 +52,11 @@ export const MediTrackSidebar = ({ isOpen, onClose }: SidebarProps) => {
             key={item.name}
             to={item.path}
             className={cn(
-              "meditrak-sidebar-item",
-              location.pathname === item.path && "active"
+              "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+              "hover:bg-accent/50 dark:hover:bg-accent/20",
+              location.pathname === item.path 
+                ? "bg-accent text-primary font-medium" 
+                : "text-foreground/70"
             )}
             onClick={() => onClose()}
           >
