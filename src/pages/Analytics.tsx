@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MediTrackSidebar } from "@/components/layout/MediTrackSidebar";
 import { Footer } from "@/components/layout/Footer";
-import { BarChart3, LineChart, PieChart, Calendar, Download, Menu, Pill } from "lucide-react";
+import { BarChart3, LineChart as LineChartIcon, PieChart as PieChartIcon, Calendar, Download, Menu, Pill } from "lucide-react";
 import { useMedications } from "@/contexts/MedicationContext";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, Legend, PieChart as RPieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, Legend, PieChart as RPieChart, Pie, Cell, LineChart } from 'recharts';
 
 const Analytics = () => {
   const { session } = useAuth();
@@ -83,7 +83,7 @@ const Analytics = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <LineChart className="h-5 w-5" />
+                    <LineChartIcon className="h-5 w-5" />
                     Weekly Adherence
                   </CardTitle>
                   <CardDescription>
@@ -117,7 +117,7 @@ const Analytics = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <PieChart className="h-5 w-5" />
+                    <PieChartIcon className="h-5 w-5" />
                     Medication Status
                   </CardTitle>
                   <CardDescription>
