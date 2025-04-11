@@ -7,19 +7,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MediTrackSidebar } from "@/components/layout/MediTrackSidebar";
 import { Footer } from "@/components/layout/Footer";
 import { BarChart3, LineChart as LineChartIcon, PieChart as PieChartIcon, Calendar, Download, Menu, Pill } from "lucide-react";
-import { useMedications } from "@/contexts/MedicationContext";
+import { MedicationProvider, useMedications } from "@/contexts/MedicationContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, Legend, PieChart as RPieChart, Pie, Cell, LineChart } from 'recharts';
 
 const Analytics = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { sortedMedications } = useMedications();
   
   if (!session) {
     navigate("/auth");
     return null;
   }
+  
+  return (
+    <MedicationProvider>
+      <AnalyticsContent sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+    </MedicationProvider>
+  );
+};
+
+const AnalyticsContent = ({ sidebarOpen, setSidebarOpen }: { sidebarOpen: boolean, setSidebarOpen: (open: boolean) => void }) => {
+  const { sortedMedications } = useMedications();
   
   // Generate sample data for charts
   const adherenceData = [

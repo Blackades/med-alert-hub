@@ -30,3 +30,19 @@ export const triggerDemoNotification = async (
     return { success: false, error, data: null };
   }
 };
+
+// Function to make the demo panel functionality explicit
+export const getESP32NotificationData = async () => {
+  try {
+    const { data, error } = await supabase.functions.invoke('esp32-notifications', {
+      method: 'GET',
+    });
+    
+    if (error) throw error;
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error getting ESP32 notification data:', error);
+    return { success: false, error, data: null };
+  }
+};

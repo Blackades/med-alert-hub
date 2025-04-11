@@ -11,6 +11,7 @@ import { MedicationProvider } from "@/contexts/MedicationContext";
 import { MedicationList } from "@/components/medications/MedicationList";
 import { AddMedicationDialog } from "@/components/AddMedicationDialog";
 import { useMedications } from "@/contexts/MedicationContext";
+import { DemoModePanel } from "@/components/DemoModePanel";
 
 const MedicationsPage = () => {
   const { session } = useAuth();
@@ -75,6 +76,9 @@ const MedicationsContent = ({ sidebarOpen, setSidebarOpen }: { sidebarOpen: bool
                 </Button>
               </AddMedicationDialog>
             </div>
+            
+            {/* Add Demo Mode Panel here */}
+            <DemoModePanel />
             
             <MedicationList 
               medications={sortedMedications} 

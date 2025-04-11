@@ -35,7 +35,7 @@ export const MediTrackSidebar = ({ isOpen, onClose }: SidebarProps) => {
             <Pill className="text-white" size={24} />
           </div>
           <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            MediTrack Pro
+            MedAlertHub
           </h1>
         </div>
         <button 

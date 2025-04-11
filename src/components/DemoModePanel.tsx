@@ -2,20 +2,20 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info } from "lucide-react";
+import { triggerDemoNotification, DemoNotificationType } from "@/integrations/supabase/services/demo";
 
 export const DemoModePanel = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { medications } = useMedications();
   const [selectedMedication, setSelectedMedication] = useState<string>("");
-  const [notificationType, setNotificationType] = useState<string>("email");
+  const [notificationType, setNotificationType] = useState<DemoNotificationType>("email");
   const [isLoading, setIsLoading] = useState(false);
   const [esp32Data, setEsp32Data] = useState<any>(null);
 
@@ -29,17 +29,24 @@ export const DemoModePanel = () => {
       return;
     }
 
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User information not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('demo-notification', {
-        body: {
-          userId: user?.id,
-          medicationId: selectedMedication,
-          notificationType: notificationType
-        },
-      });
+      const { success, data, error } = await triggerDemoNotification(
+        user.id,
+        selectedMedication,
+        notificationType
+      );
 
-      if (error) throw error;
+      if (!success) throw error;
 
       if (notificationType === 'esp32' || notificationType === 'both') {
         setEsp32Data(data.notifications || data.esp32Data?.notifications || []);
@@ -92,7 +99,7 @@ export const DemoModePanel = () => {
 
             <div>
               <label className="text-sm font-medium mb-1 block">Notification Type</label>
-              <Tabs defaultValue="email" value={notificationType} onValueChange={setNotificationType}>
+              <Tabs defaultValue="email" value={notificationType} onValueChange={(value) => setNotificationType(value as DemoNotificationType)}>
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="email" className="flex items-center gap-2">
                     <Mail className="h-4 w-4" /> Email
