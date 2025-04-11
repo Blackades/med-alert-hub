@@ -9,6 +9,7 @@ interface MedicationListProps {
   onSkip: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   showActions?: boolean; // Added showActions prop with optional flag
+  isLoading?: boolean; // Added isLoading prop
 }
 
 export const MedicationList = ({ 
@@ -16,8 +17,13 @@ export const MedicationList = ({
   onTake, 
   onSkip, 
   onDelete,
-  showActions = true // Default to true to maintain backward compatibility
+  showActions = true, // Default to true to maintain backward compatibility
+  isLoading = false // Default to false for isLoading
 }: MedicationListProps) => {
+  if (isLoading) {
+    return <div className="flex justify-center py-8">Loading medications...</div>;
+  }
+  
   return (
     <div className="space-y-4">
       {medications.length === 0 ? (

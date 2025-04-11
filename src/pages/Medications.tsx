@@ -30,7 +30,7 @@ const MedicationsPage = () => {
 };
 
 const MedicationsContent = ({ sidebarOpen, setSidebarOpen }: { sidebarOpen: boolean, setSidebarOpen: (open: boolean) => void }) => {
-  const { addMedication, sortedMedications, isLoading } = useMedications();
+  const { addMedication, sortedMedications, isLoading, takeMedication, skipMedication, deleteMedication } = useMedications();
   
   return (
     <div className="min-h-screen bg-background">
@@ -76,7 +76,13 @@ const MedicationsContent = ({ sidebarOpen, setSidebarOpen }: { sidebarOpen: bool
               </AddMedicationDialog>
             </div>
             
-            <MedicationList medications={sortedMedications} isLoading={isLoading} />
+            <MedicationList 
+              medications={sortedMedications} 
+              isLoading={isLoading}
+              onTake={takeMedication}
+              onSkip={skipMedication}
+              onDelete={deleteMedication}
+            />
           </div>
         </main>
       </div>

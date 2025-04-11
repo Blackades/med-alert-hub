@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
@@ -13,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserSettings } from "@/components/dashboard/UserSettings";
 
 const Settings = () => {
   const { session, signOut } = useAuth();
@@ -22,6 +22,7 @@ const Settings = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [appNotifications, setAppNotifications] = useState(true);
+  const { saveSettings } = useUserSettings();
   
   if (!session) {
     navigate("/auth");
@@ -93,7 +94,7 @@ const Settings = () => {
                     <p className="font-medium">Email</p>
                     <p className="text-sm text-muted-foreground">{session.user?.email}</p>
                   </div>
-                  <UserSettingsDialog />
+                  <UserSettingsDialog onSave={saveSettings} />
                 </div>
               </CardContent>
             </Card>
