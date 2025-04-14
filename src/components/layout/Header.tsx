@@ -38,7 +38,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen, onSaveSettings }: HeaderPr
           </Button>
           <div className="flex items-center space-x-2">
             <img 
-              src="/lovable-uploads/f95e1107-0149-4ed3-95f7-1cadcb619a8d.png" 
+              src="/lovable-uploads/4f96b88e-1330-4560-82b9-0931a50d0791.png" 
               alt="MedAlertHub Logo" 
               className="h-8 w-8 rounded-full"
             />
