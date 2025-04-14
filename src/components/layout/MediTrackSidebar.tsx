@@ -24,13 +24,13 @@ export const MediTrackSidebar = ({ isOpen, onClose }: SidebarProps) => {
   return (
     <div 
       className={cn(
-        "fixed top-0 left-0 h-full w-72 bg-card dark:bg-gray-900 shadow-lg z-50 transition-all duration-300 ease-out",
+        "fixed top-0 left-0 h-full w-72 bg-card dark:bg-gray-900 shadow-lg z-50 transition-all duration-300 ease-out flex flex-col",
         isOpen ? "translate-x-0" : "-translate-x-full",
         "md:translate-x-0 md:static md:shadow-none"
       )}
     >
-      <div className="flex items-center justify-between p-4 border-b border-border/50">
-        <div className="flex items-center gap-3">
+      <div className="p-4 border-b border-border/50">
+        <Link to="/" className="flex items-center gap-3">
           <div className="bg-gradient-to-r from-primary to-secondary rounded-full h-10 w-10 flex items-center justify-center shadow-md shadow-primary/20">
             <img 
               src="/lovable-uploads/4f96b88e-1330-4560-82b9-0931a50d0791.png" 
@@ -38,20 +38,10 @@ export const MediTrackSidebar = ({ isOpen, onClose }: SidebarProps) => {
               className="h-8 w-8"
             />
           </div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
-            MedAlertHub
-          </h1>
-        </div>
-        <button 
-          onClick={onClose} 
-          className="md:hidden p-2 rounded-full hover:bg-muted transition-colors"
-          aria-label="Close sidebar"
-        >
-          <X size={18} />
-        </button>
+        </Link>
       </div>
       
-      <nav className="p-4 space-y-1.5">
+      <nav className="flex-1 p-4 space-y-1.5">
         {sidebarItems.map((item) => (
           <Link
             key={item.name}
@@ -73,7 +63,7 @@ export const MediTrackSidebar = ({ isOpen, onClose }: SidebarProps) => {
         ))}
       </nav>
 
-      <div className="absolute bottom-0 w-full p-4 border-t border-border/50">
+      <div className="p-4 mt-auto">
         <div className="p-3 rounded-lg bg-accent/50 dark:bg-accent/20">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -40,6 +39,9 @@ export const Dashboard = () => {
     return null;
   }
 
+  const userInitial = session?.user?.email?.[0].toUpperCase() || "U";
+  const userEmail = session?.user?.email;
+
   // Calculate stats for dashboard
   const totalMedications = sortedMedications.length;
   const takenMedications = sortedMedications.filter(med => med.status === 'taken').length;
@@ -60,11 +62,9 @@ export const Dashboard = () => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="hidden md:flex items-center gap-2">
-            <div className="bg-gradient-to-r from-primary to-secondary rounded-full h-9 w-9 flex items-center justify-center">
-              <Pill className="text-white" size={20} />
-            </div>
-          </div>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight hidden md:block">
+            MedAlertHub
+          </h1>
         </div>
         
         <div className="flex items-center gap-4">
@@ -89,10 +89,16 @@ export const Dashboard = () => {
             )}
           </Button>
           
-          <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-            <span className="text-sm font-medium text-primary">
-              {session.user?.email?.charAt(0).toUpperCase() || "U"}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-medium">{userEmail}</p>
+              <p className="text-xs text-muted-foreground">Logged in</p>
+            </div>
+            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <span className="text-sm font-medium text-primary">
+                {userInitial}
+              </span>
+            </div>
           </div>
         </div>
       </div>
