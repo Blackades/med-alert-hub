@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Menu, Bell, UserCircle, Settings as SettingsIcon } from "lucide-react";
+import { Moon, Sun, Menu, Bell, UserCircle } from "lucide-react";
 import { useTheme } from "next-themes";
 import { UserSettingsDialog } from "@/components/UserSettingsDialog";
 import { useState } from "react";
@@ -37,10 +37,14 @@ export const Header = ({ sidebarOpen, setSidebarOpen, onSaveSettings }: HeaderPr
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center space-x-2">
-            <span className="h-8 w-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
-              <Bell className="h-4 w-4 text-white" />
-            </span>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MedAlert</h2>
+            <img 
+              src="/lovable-uploads/f95e1107-0149-4ed3-95f7-1cadcb619a8d.png" 
+              alt="MedAlertHub Logo" 
+              className="h-8 w-8 rounded-full"
+            />
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              MedAlertHub
+            </h2>
           </div>
         </div>
         <NavigationMenu className="hidden md:flex flex-1 ml-8">

@@ -32,7 +32,11 @@ export const MediTrackSidebar = ({ isOpen, onClose }: SidebarProps) => {
       <div className="flex items-center justify-between p-4 border-b border-border/50">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-r from-primary to-secondary rounded-full h-10 w-10 flex items-center justify-center">
-            <Pill className="text-white" size={24} />
+            <img 
+              src="/lovable-uploads/f95e1107-0149-4ed3-95f7-1cadcb619a8d.png" 
+              alt="MedAlertHub Logo" 
+              className="h-8 w-8"
+            />
           </div>
           <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             MedAlertHub
