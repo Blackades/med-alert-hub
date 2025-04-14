@@ -21,7 +21,7 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#8B5CF6", // Bright purple
+          DEFAULT: "#8B5CF6", // Vibrant purple
           foreground: "#FFFFFF",
           50: '#F5F3FF',
           100: '#EDE9FE',
@@ -49,18 +49,18 @@ export default {
           900: '#0C4A6E',
         },
         destructive: {
-          DEFAULT: "#FF6B6B",
+          DEFAULT: "#EF4444", // Improved red
           foreground: "#FFFFFF",
-          50: '#FFF0F0',
-          100: '#FFE0E0',
-          200: '#FFC1C1',
-          300: '#FFA3A3',
-          400: '#FF6B6B',
-          500: '#FF3838',
-          600: '#FF0505',
-          700: '#D20000',
-          800: '#A00000',
-          900: '#6D0000',
+          50: '#FEF2F2',
+          100: '#FEE2E2',
+          200: '#FECACA',
+          300: '#FCA5A5',
+          400: '#F87171',
+          500: '#EF4444',
+          600: '#DC2626',
+          700: '#B91C1C',
+          800: '#991B1B',
+          900: '#7F1D1D',
         },
         muted: {
           DEFAULT: "#F3F4F6",
@@ -77,6 +77,45 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        success: {
+          DEFAULT: "#10B981", // Green
+          50: '#ECFDF5',
+          100: '#D1FAE5',
+          200: '#A7F3D0',
+          300: '#6EE7B7',
+          400: '#34D399',
+          500: '#10B981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065F46',
+          900: '#064E3B',
+        },
+        warning: {
+          DEFAULT: "#F59E0B", // Amber
+          50: '#FFFBEB',
+          100: '#FEF3C7',
+          200: '#FDE68A',
+          300: '#FCD34D',
+          400: '#FBBF24',
+          500: '#F59E0B',
+          600: '#D97706',
+          700: '#B45309',
+          800: '#92400E',
+          900: '#78350F',
+        },
+        info: {
+          DEFAULT: "#3B82F6", // Blue
+          50: '#EFF6FF',
+          100: '#DBEAFE',
+          200: '#BFDBFE',
+          300: '#93C5FD',
+          400: '#60A5FA',
+          500: '#3B82F6',
+          600: '#2563EB',
+          700: '#1D4ED8',
+          800: '#1E40AF',
+          900: '#1E3A8A',
         },
       },
       keyframes: {
@@ -105,8 +144,12 @@ export default {
           "50%": { opacity: "0.85" },
         },
         "scale-up": {
-          "0%": { transform: "scale(0.95)" },
+          "0%": { transform: "scale(0.97)" },
           "100%": { transform: "scale(1)" },
+        },
+        "shimmer": {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
         },
       },
       animation: {
@@ -117,6 +160,7 @@ export default {
         "slide-in": "slide-in 0.3s ease-out",
         "pulse-gentle": "pulse-gentle 3s infinite ease-in-out",
         "scale-up": "scale-up 0.2s ease-out",
+        "shimmer": "shimmer 2s infinite linear",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -124,19 +168,77 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: [
+          'Inter', 
+          '-apple-system', 
+          'BlinkMacSystemFont', 
+          'Segoe UI', 
+          'Roboto', 
+          'Helvetica Neue', 
+          'Arial', 
+          'sans-serif'
+        ],
       },
       boxShadow: {
-        soft: '0 4px 20px rgba(0, 0, 0, 0.1)',
-        glow: '0 0 15px rgba(86, 193, 224, 0.5)',
-        'glow-secondary': '0 0 15px rgba(175, 122, 231, 0.5)',
+        soft: '0 4px 20px rgba(0, 0, 0, 0.08)',
+        glow: '0 0 15px rgba(86, 193, 224, 0.3)',
+        'glow-primary': '0 0 15px rgba(139, 92, 246, 0.3)',
+        'glow-secondary': '0 0 15px rgba(56, 189, 248, 0.3)',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'dot-pattern': 'radial-gradient(circle, #56C1E0 1px, transparent 1px)',
+        'shimmer': 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)',
       },
       backgroundSize: {
         'dot-size': '20px 20px',
+        'shimmer-size': '200% 100%',
+      },
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: '65ch',
+            color: 'var(--foreground)',
+            a: {
+              color: 'var(--primary)',
+              '&:hover': {
+                color: 'color-mix(in srgb, var(--primary) 80%, white)',
+              },
+            },
+            strong: {
+              color: 'var(--foreground)',
+            },
+            h1: {
+              color: 'var(--foreground)',
+            },
+            h2: {
+              color: 'var(--foreground)',
+            },
+            h3: {
+              color: 'var(--foreground)',
+            },
+            blockquote: {
+              color: 'var(--muted-foreground)',
+              borderLeftColor: 'var(--border)',
+            },
+            hr: {
+              borderColor: 'var(--border)',
+            },
+            ul: {
+              li: {
+                '&::marker': {
+                  color: 'var(--muted-foreground)',
+                },
+              },
+            },
+            code: {
+              color: 'var(--foreground)',
+              backgroundColor: 'var(--muted)',
+              borderRadius: '0.25rem',
+              padding: '0.15rem 0.3rem',
+            },
+          },
+        },
       },
     },
   },

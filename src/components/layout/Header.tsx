@@ -33,16 +33,19 @@ export const Header = ({ sidebarOpen, setSidebarOpen, onSaveSettings }: HeaderPr
             size="icon"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="hover:bg-primary/10 transition-all duration-300"
+            aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex items-center space-x-2">
-            <img 
-              src="/lovable-uploads/4f96b88e-1330-4560-82b9-0931a50d0791.png" 
-              alt="MedAlertHub Logo" 
-              className="h-8 w-8 rounded-full"
-            />
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <div className="flex items-center space-x-3">
+            <div className="bg-gradient-to-r from-primary to-secondary rounded-full h-9 w-9 flex items-center justify-center shadow-sm">
+              <img 
+                src="/lovable-uploads/4f96b88e-1330-4560-82b9-0931a50d0791.png" 
+                alt="MedAlertHub Logo" 
+                className="h-7 w-7"
+              />
+            </div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
               MedAlertHub
             </h2>
           </div>
@@ -50,13 +53,13 @@ export const Header = ({ sidebarOpen, setSidebarOpen, onSaveSettings }: HeaderPr
         <NavigationMenu className="hidden md:flex flex-1 ml-8">
           <NavigationMenuList>
             <NavigationMenuItem>
-              <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">Dashboard</NavigationMenuTrigger>
+              <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10 text-sm">Dashboard</NavigationMenuTrigger>
               <NavigationMenuContent>
                 <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
                   <li className="row-span-3">
                     <NavigationMenuLink asChild>
                       <a
-                        className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-primary/20 to-primary/40 p-6 no-underline outline-none focus:shadow-md"
+                        className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-primary/20 to-primary/40 p-6 no-underline outline-none focus:shadow-md transition-all duration-300 hover:shadow-lg hover:shadow-primary/10"
                         href="#"
                       >
                         <div className="mt-4 mb-2 text-lg font-medium text-primary">
@@ -132,12 +135,13 @@ export const Header = ({ sidebarOpen, setSidebarOpen, onSaveSettings }: HeaderPr
             </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setShowNotifications(!showNotifications)}
             className="relative hover:bg-primary/10 transition-all duration-300"
+            aria-label="Notifications"
           >
             <Bell className="h-5 w-5" />
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-secondary animate-pulse-soft"></span>
@@ -147,6 +151,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen, onSaveSettings }: HeaderPr
             size="icon"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="hover:bg-primary/10 transition-all duration-300"
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
             {theme === "dark" ? (
               <Sun className="h-5 w-5 text-yellow-400" />
@@ -159,6 +164,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen, onSaveSettings }: HeaderPr
               variant="ghost" 
               size="icon"
               className="hover:bg-primary/10 transition-all duration-300"
+              aria-label="User settings"
             >
               <UserCircle className="h-5 w-5" />
             </Button>

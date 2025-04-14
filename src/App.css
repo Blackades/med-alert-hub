@@ -4,27 +4,105 @@
 @import 'tailwindcss/utilities';
 
 @layer components {
+  /* Enhanced sidebar styling */
   .meditrak-sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-accent/50 dark:hover:bg-accent/20 text-foreground/70;
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 
+           hover:bg-accent/70 hover:-translate-y-0.5
+           dark:hover:bg-accent/20 text-foreground/70;
   }
 
   .meditrak-sidebar-item.active {
-    @apply bg-accent text-primary font-medium;
+    @apply bg-primary text-white font-medium shadow-md shadow-primary/20;
   }
 
+  /* Card variants */
   .medication-card {
-    @apply border rounded-xl p-4 transition-all hover:shadow-md;
+    @apply border rounded-xl p-4 transition-all duration-300 
+           hover:shadow-md hover:-translate-y-0.5;
   }
 
   .medication-card-upcoming {
-    @apply border-blue-100 bg-blue-50 dark:border-blue-900/30 dark:bg-blue-900/10;
+    @apply border-blue-100 bg-blue-50/70 dark:border-blue-900/30 dark:bg-blue-900/10;
   }
   
   .medication-card-taken {
-    @apply border-green-100 bg-green-50 dark:border-green-900/30 dark:bg-green-900/10;
+    @apply border-green-100 bg-green-50/70 dark:border-green-900/30 dark:bg-green-900/10;
   }
   
   .medication-card-overdue {
-    @apply border-red-100 bg-red-50 dark:border-red-900/30 dark:bg-red-900/10;
+    @apply border-red-100 bg-red-50/70 dark:border-red-900/30 dark:bg-red-900/10;
+  }
+
+  /* Form improvements */
+  .form-input {
+    @apply w-full px-4 py-2 border border-input bg-background rounded-md 
+           focus:outline-none focus:ring-2 focus:ring-primary/50 
+           placeholder:text-muted-foreground transition-all duration-300;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-foreground mb-1;
+  }
+
+  /* Button enhancements */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm 
+           font-medium transition-all duration-300 focus:outline-none 
+           focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary/90 hover:-translate-y-0.5 
+           hover:shadow-md hover:shadow-primary/25;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-secondary/90 hover:-translate-y-0.5 
+           hover:shadow-md hover:shadow-secondary/25;
+  }
+
+  .btn-outline {
+    @apply border border-input bg-transparent hover:bg-accent 
+           hover:-translate-y-0.5 hover:shadow-sm;
+  }
+
+  /* Status indicators */
+  .status-dot {
+    @apply h-2.5 w-2.5 rounded-full inline-block mr-2;
+  }
+
+  .status-active {
+    @apply bg-green-500 animate-pulse-soft;
+  }
+
+  .status-warning {
+    @apply bg-yellow-500 animate-pulse-soft;
+  }
+
+  .status-error {
+    @apply bg-red-500 animate-pulse-soft;
+  }
+
+  .status-inactive {
+    @apply bg-gray-300;
+  }
+  
+  /* Call-to-action buttons */
+  .cta-button {
+    @apply relative overflow-hidden py-3 px-6 rounded-lg font-medium 
+           text-white bg-gradient-to-r from-primary to-secondary 
+           hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 
+           active:translate-y-0 transition-all duration-300;
+  }
+  
+  .cta-button::before {
+    @apply content-[''] absolute top-0 left-0 w-full h-full 
+           bg-gradient-to-r from-white/0 via-white/20 to-white/0 
+           -translate-x-full transform;
+    transition: transform 0.9s ease;
+  }
+  
+  .cta-button:hover::before {
+    @apply translate-x-full;
   }
 }
