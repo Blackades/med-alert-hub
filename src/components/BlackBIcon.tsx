@@ -1,4 +1,5 @@
 import React from 'react';
+import './BlackBIcon.css';
 
 interface BlackBIconProps {
   onClose?: () => void;
