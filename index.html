@@ -7,10 +7,58 @@
     <meta name="description" content="Blackades' Project" />
     <meta name="author" content="Blackades" />
     <link rel="icon" type="image/x-icon" href="/favicon.png" />
-  </head>
+    <style>
+      .icon-container {
+        display: flex;
+        align-items: center;
+        background-color: #f8f9fa;
+        border-radius: 20px;
+        padding: 5px 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        max-width: fit-content;
+        margin: 20px;
+      }
 
+      .icon {
+        width: 30px;
+        height: 30px;
+        border: 2px solid red;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-right: 8px;
+      }
+
+      .icon-label {
+        font-family: Arial, sans-serif;
+        color: #333;
+        font-size: 14px;
+        margin-right: 8px;
+      }
+
+      .close-button {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: #666;
+      }
+    </style>
+  </head>
   <body>
     <div id="root"></div>
+    
+    <!-- Black B Icon Implementation -->
+    <div class="icon-container">
+      <div class="icon">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="black" rx="10" ry="10"/>
+          <text x="50" y="70" font-family="Arial, sans-serif" font-size="60" font-weight="bold" text-anchor="middle" fill="white">B</text>
+        </svg>
+      </div>
+      <span class="icon-label">Black B Icon</span>
+      <button class="close-button">×</button>
+    </div>
+    
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
