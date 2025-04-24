@@ -1,8 +1,7 @@
-
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { MedicationWithStatus } from "@/types/medication";
-import { format, subDays, startOfDay, isWithinInterval, parseISO } from "date-fns";
+import { format, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from "date-fns";
 
 interface MedicationStatsProps {
   medications: MedicationWithStatus[];
@@ -20,25 +19,90 @@ export const MedicationStats = ({ medications }: MedicationStatsProps) => {
 
   const calculateDailyStats = (date: Date, meds: MedicationWithStatus[]) => {
     const dayStart = startOfDay(date);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayEnd.getDate() + 1);
+    const dayEnd = endOfDay(date);
 
     return meds.reduce((acc, medication) => {
-      const schedules = medication.schedule || [];
+      // Get medication schedules from the medication object
+      const schedules = medication.medication_schedules || [];
+      
       schedules.forEach(schedule => {
-        if (!schedule.time) return;
-
-        const scheduleDate = parseISO(schedule.time);
-        if (isWithinInterval(scheduleDate, { start: dayStart, end: dayEnd })) {
-          if (schedule.taken) {
-            acc.taken++;
-          } else if (schedule.missed) {
-            acc.missed++;
-          } else if (schedule.skipped) {
-            acc.skipped++;
+        // Check if this schedule is relevant for this day
+        if (!schedule.scheduled_time) return;
+        
+        try {
+          // Handle specific scheduled time format from backend
+          let scheduleDate: Date;
+          
+          // If it's a full ISO date
+          if (schedule.scheduled_time.includes('T')) {
+            scheduleDate = parseISO(schedule.scheduled_time);
+          } else {
+            // If it's just a time string (HH:MM), combine with the current date
+            const [hours, minutes] = schedule.scheduled_time.split(':');
+            scheduleDate = new Date(date);
+            scheduleDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
           }
+          
+          // Check if this schedule falls within the current day
+          if (isWithinInterval(scheduleDate, { start: dayStart, end: dayEnd })) {
+            if (schedule.taken) {
+              acc.taken++;
+            } else if (schedule.missed_doses) {
+              acc.missed++;
+            } else if (schedule.skipped) {
+              acc.skipped++;
+            }
+          }
+        } catch (error) {
+          console.error("Error parsing schedule time:", error);
         }
       });
+      
+      // Also check medication logs for this day if available
+      const logs = medication.medication_logs || [];
+      logs.forEach(log => {
+        if (!log.scheduled_time) return;
+        
+        try {
+          const logDate = parseISO(log.scheduled_time);
+          
+          if (isWithinInterval(logDate, { start: dayStart, end: dayEnd })) {
+            switch (log.status) {
+              case 'taken':
+                // Only count if not already counted from schedules
+                if (!medication.medication_schedules?.some(s => 
+                  s.scheduled_time && 
+                  isWithinInterval(parseISO(s.scheduled_time), { start: dayStart, end: dayEnd }) && 
+                  s.taken
+                )) {
+                  acc.taken++;
+                }
+                break;
+              case 'missed':
+                if (!medication.medication_schedules?.some(s => 
+                  s.scheduled_time && 
+                  isWithinInterval(parseISO(s.scheduled_time), { start: dayStart, end: dayEnd }) && 
+                  s.missed_doses
+                )) {
+                  acc.missed++;
+                }
+                break;
+              case 'skipped':
+                if (!medication.medication_schedules?.some(s => 
+                  s.scheduled_time && 
+                  isWithinInterval(parseISO(s.scheduled_time), { start: dayStart, end: dayEnd }) && 
+                  s.skipped
+                )) {
+                  acc.skipped++;
+                }
+                break;
+            }
+          }
+        } catch (error) {
+          console.error("Error parsing log time:", error);
+        }
+      });
+      
       return acc;
     }, { taken: 0, missed: 0, skipped: 0 });
   };
