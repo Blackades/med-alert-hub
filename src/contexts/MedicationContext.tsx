@@ -1,10 +1,10 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/components/AuthProvider";
 import type { Medication, MedicationWithStatus } from "@/types/medication";
 import { getMedicationStatus, calculateNextDose } from "@/utils/MedicationUtils";
+import { getMedicationStreak as fetchMedicationStreak } from "@/integrations/supabase/services/streaks";
 
 type MedicationContextType = {
   medications: Medication[];
@@ -269,69 +269,58 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // New function to refill medication
+  // Updated refillMedication function
   const refillMedication = async (id: string, quantity: number) => {
     try {
       if (!quantity || quantity <= 0) {
         throw new Error("Please enter a valid refill quantity");
       }
-
+      
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
       const { data, error } = await supabase.functions.invoke('medication-refill', {
         body: {
           medicationId: id,
           refillQuantity: quantity,
+          userId: user.id,
           date: new Date().toISOString(),
         },
       });
-
       if (error) throw error;
       console.log("Refill response:", data);
-
       toast({
         title: "Medication refilled",
         description: `Added ${quantity} units to your inventory.`,
         className: "bg-primary/10 border-primary",
       });
-
       await fetchMedications();
       return data;
     } catch (error: any) {
       console.error("Error refilling medication:", error);
       toast({
         title: "Error refilling medication",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
       throw error;
     }
   };
 
-  // New function to get medication streak information
+  // Get medication streak using the improved function from services
   const getMedicationStreak = async (id: string) => {
     try {
       if (!user?.id) {
         throw new Error("User not authenticated");
       }
-
-      const { data, error } = await supabase.functions.invoke('medication-streaks', {
-        body: {
-          userId: user.id,
-          medicationId: id,
-        },
-      });
-
-      if (error) throw error;
-
-      // Find the specific medication streak data
-      const medicationStreak = data?.find((streak: any) => streak.medicationId === id);
+      const { success, data } = await fetchMedicationStreak(id, user.id);
       
-      if (!medicationStreak) {
-        return { currentStreak: 0, longestStreak: 0 };
+      if (!success) {
+        throw new Error("Failed to fetch streak information");
       }
-      
       return {
-        currentStreak: medicationStreak.currentStreak || 0,
-        longestStreak: medicationStreak.longestStreak || 0
+        currentStreak: data?.currentStreak || 0,
+        longestStreak: data?.longestStreak || 0
       };
     } catch (error: any) {
       console.error("Error getting medication streak:", error);
