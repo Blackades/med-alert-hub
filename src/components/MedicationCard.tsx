@@ -1,292 +1,241 @@
-import { useState, useEffect } from 'react';
-import { Card } from "@/components/ui/card";
+
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Check, X, Trash2, AlertTriangle } from "lucide-react";
-import { format, parseISO, differenceInMinutes } from "date-fns";
-import { useToast } from "@/components/ui/use-toast";
-import { cn } from "@/lib/utils";
-
-// Define a proper type for frequency
-interface FrequencyObject {
-  timesPerDay?: number;
-  intervalHours?: number;
-}
-
-export interface MedicationWithStatus {
-  id: string;
-  name: string;
-  dosage: string;
-  instructions?: string;
-  nextDose: string; // ISO string
-  status: 'upcoming' | 'due' | 'overdue' | 'taken' | 'missed' | 'skipped';
-  frequency: string | FrequencyObject; // Updated to allow both string and object
-}
+import { MedicationWithStatus } from "@/types/medication";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Calendar, Check, Clock, Droplet, Fire, Pill, SkipForward, Trash2, Pill as PillIcon, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useMedications } from "@/contexts/MedicationContext";
+import { format } from "date-fns";
+import { MedicationRefillDialog } from "./medications/MedicationRefillDialog";
 
 interface MedicationCardProps {
   medication: MedicationWithStatus;
   onTake: (id: string) => Promise<void>;
   onSkip: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  showActions?: boolean; // Added the showActions property here
+  showActions?: boolean;
 }
 
-export const MedicationCard = ({ medication, onTake, onSkip, onDelete, showActions = true }: MedicationCardProps) => {
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [medicationStatus, setMedicationStatus] = useState(medication.status);
-  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
-  const { toast } = useToast();
+export function MedicationCard({ 
+  medication, 
+  onTake, 
+  onSkip, 
+  onDelete,
+  showActions = true
+}: MedicationCardProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentAction, setCurrentAction] = useState<string>('');
+  const [streakInfo, setStreakInfo] = useState({ currentStreak: 0, longestStreak: 0 });
+  const { getMedicationStreak } = useMedications();
 
-  // Process the medication status and update it every minute
+  const { name, dosage, instructions, status, nextDose } = medication;
+
   useEffect(() => {
-    const updateStatus = () => {
-      if (!medication.nextDose) return;
-      
-      const nextDoseTime = parseISO(medication.nextDose);
-      const now = new Date();
-      
-      // Calculate time difference in minutes
-      const minutesDiff = differenceInMinutes(nextDoseTime, now);
-      
-      let newStatus = medication.status;
-      let timeText = null;
-      
-      if (['taken', 'skipped', 'missed'].includes(medication.status)) {
-        // Status is final, don't change it
-        newStatus = medication.status as any;
-      } else if (minutesDiff <= -10) {
-        // More than 10 minutes past the scheduled time
-        newStatus = 'overdue';
-        timeText = `${Math.abs(minutesDiff)}m overdue`;
-      } else if (minutesDiff < 0) {
-        // Less than 10 minutes past, still due
-        newStatus = 'due';
-        timeText = 'Due now';
-      } else if (minutesDiff <= 10) {
-        // Due within 10 minutes
-        newStatus = 'due';
-        timeText = `Due in ${minutesDiff}m`;
-      } else {
-        // Upcoming dose
-        newStatus = 'upcoming';
-        
-        if (minutesDiff < 60) {
-          timeText = `In ${minutesDiff}m`;
-        } else {
-          const hours = Math.floor(minutesDiff / 60);
-          const mins = minutesDiff % 60;
-          timeText = `In ${hours}h${mins > 0 ? ` ${mins}m` : ''}`;
-        }
-      }
-      
-      setMedicationStatus(newStatus as any);
-      setTimeRemaining(timeText);
+    // Fetch streak information
+    const fetchStreakInfo = async () => {
+      const info = await getMedicationStreak(medication.id);
+      setStreakInfo(info);
     };
     
-    // Update immediately
-    updateStatus();
-    
-    // Set up interval to update every minute
-    const interval = setInterval(updateStatus, 60000);
-    
-    return () => clearInterval(interval);
-  }, [medication.nextDose, medication.status]);
+    fetchStreakInfo();
+  }, [medication.id]);
 
-  // Handle taking medication
-  const handleTake = async () => {
-    if (!['due', 'overdue'].includes(medicationStatus) && medicationStatus !== 'upcoming') {
-      return;
-    }
-    
+  const handleAction = async (action: string, id: string) => {
+    setIsLoading(true);
+    setCurrentAction(action);
     try {
-      setIsAnimating(true);
-      await onTake(medication.id);
-      setMedicationStatus('taken');
-      toast({
-        title: "Medication taken",
-        description: `You've marked ${medication.name} as taken.`,
-        variant: "default",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to mark medication as taken. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setTimeout(() => setIsAnimating(false), 500);
-    }
-  };
-
-  // Handle skipping medication
-  const handleSkip = async () => {
-    if (!['due', 'overdue', 'upcoming'].includes(medicationStatus)) {
-      return;
-    }
-    
-    try {
-      setIsAnimating(true);
-      await onSkip(medication.id);
-      setMedicationStatus('skipped');
-      toast({
-        title: "Medication skipped",
-        description: `You've marked ${medication.name} as skipped.`,
-        variant: "default",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to mark medication as skipped. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setTimeout(() => setIsAnimating(false), 500);
-    }
-  };
-
-  // Handle deleting medication
-  const handleDelete = async () => {
-    if (confirm(`Are you sure you want to delete ${medication.name}?`)) {
-      try {
-        await onDelete(medication.id);
-        toast({
-          title: "Medication deleted",
-          description: `${medication.name} has been deleted.`,
-          variant: "default",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete medication. Please try again.",
-          variant: "destructive",
-        });
+      if (action === "take") {
+        await onTake(id);
+      } else if (action === "skip") {
+        await onSkip(id);
+      } else if (action === "delete") {
+        await onDelete(id);
       }
+    } finally {
+      setIsLoading(false);
+      setCurrentAction('');
     }
   };
 
-  // Get status-based styling
   const getStatusColor = () => {
-    switch (medicationStatus) {
-      case 'taken':
-        return "bg-green-500";
-      case 'skipped':
-        return "bg-yellow-500";
-      case 'missed':
-        return "bg-red-500";
-      case 'overdue':
-        return "bg-red-400";
-      case 'due':
-        return "bg-orange-500";
-      case 'upcoming':
-      default:
-        return "bg-blue-500";
+    switch (status) {
+      case "taken": return "text-green-500";
+      case "overdue": return "text-destructive";
+      case "due": return "text-amber-500";
+      default: return "text-muted-foreground";
     }
   };
 
-  // Get formatted next dose time
-  const getFormattedNextDose = () => {
-    if (!medication.nextDose) return 'N/A';
-    return format(parseISO(medication.nextDose), 'h:mm a');
+  const getStatusBadge = () => {
+    switch (status) {
+      case "taken": 
+        return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">Taken</Badge>;
+      case "overdue": 
+        return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">Overdue</Badge>;
+      case "due": 
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">Due Now</Badge>;
+      default: 
+        return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Upcoming</Badge>;
+    }
   };
 
-  // Format frequency string to ensure it's a string
-  const getFormattedFrequency = () => {
-    if (typeof medication.frequency === 'string') {
-      return medication.frequency;
-    }
-    // Handle when frequency is an object
-    if (medication.frequency && typeof medication.frequency === 'object') {
-      const freq = medication.frequency as FrequencyObject;
-      if (freq.timesPerDay) {
-        return `${freq.timesPerDay} time${freq.timesPerDay > 1 ? 's' : ''} per day`;
+  const getTimeDisplay = () => {
+    if (!nextDose) return "No schedule";
+    
+    try {
+      const nextDoseDate = new Date(nextDose);
+      // Check if it's today
+      const isToday = new Date().toDateString() === nextDoseDate.toDateString();
+      
+      if (isToday) {
+        return format(nextDoseDate, "h:mm a");
+      } else {
+        return format(nextDoseDate, "MMM d, h:mm a");
       }
-      if (freq.intervalHours) {
-        return `Every ${freq.intervalHours} hour${freq.intervalHours > 1 ? 's' : ''}`;
-      }
-      return 'Custom schedule';
+    } catch (e) {
+      console.error("Date parsing error:", e);
+      return "Invalid date";
     }
-    return '';
   };
-
-  // Determine if action buttons should be disabled
-  const canTake = ['due', 'overdue', 'upcoming'].includes(medicationStatus);
-  const canSkip = ['due', 'overdue', 'upcoming'].includes(medicationStatus);
 
   return (
-    <Card className={cn(
-      "p-6 transition-all duration-300 transform hover:shadow-lg dark:bg-gray-800 dark:border-gray-700",
-      isAnimating ? "scale-95" : "",
-      medicationStatus === 'overdue' ? "border-l-4 border-l-red-500" : "",
-      medicationStatus === 'due' ? "border-l-4 border-l-orange-500" : ""
-    )}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <div className={`w-3 h-3 rounded-full ${getStatusColor()}`} />
-            <h3 className="font-semibold text-lg dark:text-white">{medication.name}</h3>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{medication.dosage}</p>
-          {medication.frequency && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">{getFormattedFrequency()}</p>
-          )}
-        </div>
-        <div className="flex flex-col items-end">
-          <div className="flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium dark:text-gray-300">
-              {getFormattedNextDose()}
-            </span>
-          </div>
-          {timeRemaining && (
-            <span className={cn(
-              "text-xs mt-1",
-              medicationStatus === 'overdue' ? "text-red-500 font-medium" : "text-gray-500"
-            )}>
-              {medicationStatus === 'overdue' && <AlertTriangle className="inline w-3 h-3 mr-1" />}
-              {timeRemaining}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {medication.instructions && (
-        <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">{medication.instructions}</p>
-      )}
-
-      {showActions && (
-        <div className="mt-4 flex items-center justify-end space-x-2">
-          <Button
-            variant="destructive"
-            size="sm"
-            className="flex items-center space-x-1"
-            onClick={handleDelete}
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Delete</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-            onClick={handleSkip}
-            disabled={!canSkip || medicationStatus === 'skipped'}
-          >
-            <X className="w-4 h-4" />
-            <span>{medicationStatus === 'skipped' ? 'Skipped' : 'Skip'}</span>
-          </Button>
-          <Button
-            size="sm"
-            className={cn(
-              "flex items-center space-x-1",
-              medicationStatus === 'taken' ? "bg-green-500 hover:bg-green-600" : ""
+    <Card className={`overflow-hidden transition-all duration-300 ${
+      status === "overdue" ? "border-destructive/40 shadow-sm shadow-destructive/10" : 
+      status === "due" ? "border-amber-500/40 shadow-sm shadow-amber-500/10" : 
+      status === "taken" ? "border-green-500/40 shadow-sm shadow-green-500/10" : 
+      "hover:shadow-md hover:border-primary/40"
+    }`}>
+      <CardContent className="p-0">
+        <div className="flex flex-col sm:flex-row">
+          <div className="flex-grow p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-medium">{name}</h3>
+                  {getStatusBadge()}
+                </div>
+                <p className="text-muted-foreground text-sm mt-1">{dosage}</p>
+                {instructions && (
+                  <p className="text-sm mt-2 text-muted-foreground">{instructions}</p>
+                )}
+              </div>
+              
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1 text-sm">
+                  <Clock className={`h-4 w-4 ${getStatusColor()}`} />
+                  <span className={`${getStatusColor()}`}>{getTimeDisplay()}</span>
+                </div>
+                {streakInfo.currentStreak > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1 text-xs text-amber-500 bg-amber-500/10 px-2 py-1 rounded-full">
+                          <Fire className="h-3 w-3" />
+                          <span>{streakInfo.currentStreak} day streak</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Current streak: {streakInfo.currentStreak} days</p>
+                        <p>Longest streak: {streakInfo.longestStreak} days</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+            </div>
+            
+            {showActions && status !== 'taken' && (
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleAction("take", medication.id)}
+                  disabled={isLoading}
+                  className={`transition-all duration-200 ${
+                    currentAction === 'take' ? 'bg-primary/20' : 'hover:bg-primary/10'
+                  }`}
+                >
+                  {currentAction === 'take' && isLoading ? (
+                    <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="mr-1 h-4 w-4" />
+                  )}
+                  Take
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleAction("skip", medication.id)}
+                  disabled={isLoading}
+                  className={`transition-all duration-200 ${
+                    currentAction === 'skip' ? 'bg-amber-500/20' : 'hover:bg-amber-500/10'
+                  }`}
+                >
+                  {currentAction === 'skip' && isLoading ? (
+                    <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <SkipForward className="mr-1 h-4 w-4" />
+                  )}
+                  Skip
+                </Button>
+                
+                <MedicationRefillDialog medicationId={medication.id} medicationName={name}>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="transition-all duration-200 hover:bg-indigo-500/10"
+                  >
+                    <Droplet className="mr-1 h-4 w-4" />
+                    Refill
+                  </Button>
+                </MedicationRefillDialog>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="ml-auto transition-all duration-200 hover:bg-destructive/10"
+                    >
+                      <Trash2 className="mr-1 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="animate-scale-in">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete {name} from your medications list. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleAction("delete", medication.id)}
+                        disabled={isLoading && currentAction === 'delete'}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        {isLoading && currentAction === 'delete' ? (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          "Delete"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             )}
-            onClick={handleTake}
-            disabled={!canTake || medicationStatus === 'taken'}
-          >
-            <Check className="w-4 h-4" />
-            <span>{medicationStatus === 'taken' ? 'Taken' : 'Take'}</span>
-          </Button>
+          </div>
         </div>
-      )}
+      </CardContent>
     </Card>
   );
-};
+}

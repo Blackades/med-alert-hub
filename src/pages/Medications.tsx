@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MediTrackSidebar } from "@/components/layout/MediTrackSidebar";
 import { Footer } from "@/components/layout/Footer";
-import { Menu, Pill, PlusCircle } from "lucide-react";
+import { Menu, Pill, PlusCircle, LayoutGrid, List, Package } from "lucide-react";
 import { MedicationProvider } from "@/contexts/MedicationContext";
 import { MedicationList } from "@/components/medications/MedicationList";
 import { AddMedicationDialog } from "@/components/AddMedicationDialog";
 import { useMedications } from "@/contexts/MedicationContext";
 import { DemoModePanel } from "@/components/DemoModePanel";
+import { MedicationInventory } from "@/components/medications/MedicationInventory";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const MedicationsPage = () => {
   const { session } = useAuth();
@@ -32,6 +34,7 @@ const MedicationsPage = () => {
 
 const MedicationsContent = ({ sidebarOpen, setSidebarOpen }: { sidebarOpen: boolean, setSidebarOpen: (open: boolean) => void }) => {
   const { addMedication, sortedMedications, isLoading, takeMedication, skipMedication, deleteMedication } = useMedications();
+  const [activeTab, setActiveTab] = useState<string>("medications");
   
   return (
     <div className="min-h-screen bg-background">
@@ -80,13 +83,32 @@ const MedicationsContent = ({ sidebarOpen, setSidebarOpen }: { sidebarOpen: bool
             {/* Add Demo Mode Panel here */}
             <DemoModePanel />
             
-            <MedicationList 
-              medications={sortedMedications} 
-              isLoading={isLoading}
-              onTake={takeMedication}
-              onSkip={skipMedication}
-              onDelete={deleteMedication}
-            />
+            <Tabs defaultValue="medications" value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="medications" className="flex items-center gap-2">
+                  <List className="h-4 w-4" />
+                  <span>Medications</span>
+                </TabsTrigger>
+                <TabsTrigger value="inventory" className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  <span>Inventory</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="medications" className="mt-0 animate-fade-in">
+                <MedicationList 
+                  medications={sortedMedications} 
+                  isLoading={isLoading}
+                  onTake={takeMedication}
+                  onSkip={skipMedication}
+                  onDelete={deleteMedication}
+                />
+              </TabsContent>
+              
+              <TabsContent value="inventory" className="mt-0 animate-fade-in">
+                <MedicationInventory />
+              </TabsContent>
+            </Tabs>
           </div>
         </main>
       </div>

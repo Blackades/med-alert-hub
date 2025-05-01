@@ -24,6 +24,93 @@ export type Database = {
         }
         Relationships: []
       }
+      devices: {
+        Row: {
+          created_at: string | null
+          device_id: string
+          device_name: string
+          device_type: string
+          id: string
+          is_active: boolean | null
+          last_connected_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_id: string
+          device_name: string
+          device_type: string
+          id?: string
+          is_active?: boolean | null
+          last_connected_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string
+          device_name?: string
+          device_type?: string
+          id?: string
+          is_active?: boolean | null
+          last_connected_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_queue: {
+        Row: {
+          body: string
+          created_at: string
+          email: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          next_retry_at: string | null
+          retries: number
+          retry_count: number | null
+          status: string
+          subject: string
+          to: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          email: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          next_retry_at?: string | null
+          retries?: number
+          retry_count?: number | null
+          status?: string
+          subject: string
+          to?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          next_retry_at?: string | null
+          retries?: number
+          retry_count?: number | null
+          status?: string
+          subject?: string
+          to?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       medication_inventory: {
         Row: {
           created_at: string | null
@@ -36,6 +123,7 @@ export type Database = {
           max_quantity: number | null
           medication_id: string
           refill_threshold: number | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -48,6 +136,7 @@ export type Database = {
           max_quantity?: number | null
           medication_id: string
           refill_threshold?: number | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -60,6 +149,7 @@ export type Database = {
           max_quantity?: number | null
           medication_id?: string
           refill_threshold?: number | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -73,28 +163,46 @@ export type Database = {
       }
       medication_logs: {
         Row: {
-          created_at: string
+          created_at: string | null
+          dosage_taken: number | null
+          dosage_unit: string | null
           id: string
           medication_id: string
+          medication_name: string | null
+          notes: string | null
+          reason: string | null
           scheduled_time: string
           status: string
           taken_at: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
+          dosage_taken?: number | null
+          dosage_unit?: string | null
           id?: string
           medication_id: string
+          medication_name?: string | null
+          notes?: string | null
+          reason?: string | null
           scheduled_time: string
           status: string
           taken_at?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
+          dosage_taken?: number | null
+          dosage_unit?: string | null
           id?: string
           medication_id?: string
+          medication_name?: string | null
+          notes?: string | null
+          reason?: string | null
           scheduled_time?: string
           status?: string
           taken_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -185,6 +293,47 @@ export type Database = {
           },
         ]
       }
+      medication_streaks: {
+        Row: {
+          created_at: string | null
+          current_streak: number | null
+          id: string
+          last_taken_at: string | null
+          longest_streak: number | null
+          medication_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_streak?: number | null
+          id?: string
+          last_taken_at?: string | null
+          longest_streak?: number | null
+          medication_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_streak?: number | null
+          id?: string
+          last_taken_at?: string | null
+          longest_streak?: number | null
+          medication_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_streaks_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medications: {
         Row: {
           created_at: string | null
@@ -214,6 +363,89 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      mood_entries: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          mood: number
+          notes: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          mood: number
+          notes?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          mood?: number
+          notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_logs: {
+        Row: {
+          content: Json | null
+          created_at: string | null
+          delivered: boolean | null
+          delivery_details: Json | null
+          id: string
+          medication_id: string | null
+          notification_type: string
+          priority_level: string | null
+          request_id: string | null
+          scheduled_time: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string | null
+          delivered?: boolean | null
+          delivery_details?: Json | null
+          id?: string
+          medication_id?: string | null
+          notification_type: string
+          priority_level?: string | null
+          request_id?: string | null
+          scheduled_time?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string | null
+          delivered?: boolean | null
+          delivery_details?: Json | null
+          id?: string
+          medication_id?: string | null
+          notification_type?: string
+          priority_level?: string | null
+          request_id?: string | null
+          scheduled_time?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -268,9 +500,121 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_queue: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          phone: string
+          sent_at: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          phone: string
+          sent_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          phone?: string
+          sent_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_devices: {
+        Row: {
+          created_at: string | null
+          device_endpoint: string | null
+          device_id: string | null
+          device_name: string | null
+          device_token: string | null
+          device_type: string | null
+          id: string
+          is_active: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_endpoint?: string | null
+          device_id?: string | null
+          device_name?: string | null
+          device_token?: string | null
+          device_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_endpoint?: string | null
+          device_id?: string | null
+          device_name?: string | null
+          device_token?: string | null
+          device_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      active_user_devices: {
+        Row: {
+          created_at: string | null
+          device_endpoint: string | null
+          device_id: string | null
+          device_name: string | null
+          device_token: string | null
+          device_type: string | null
+          id: string | null
+          is_active: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_endpoint?: string | null
+          device_id?: string | null
+          device_name?: string | null
+          device_token?: string | null
+          device_type?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_endpoint?: string | null
+          device_id?: string | null
+          device_name?: string | null
+          device_token?: string | null
+          device_type?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       auto_mark_missed_doses: {
@@ -332,6 +676,19 @@ export type Database = {
       mark_dose_as_taken: {
         Args: { p_medication_id: string; p_scheduled_time?: string }
         Returns: undefined
+      }
+      process_email_queue: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      register_esp32_device: {
+        Args: {
+          p_user_id: string
+          p_device_id: string
+          p_device_token: string
+          p_device_name?: string
+        }
+        Returns: string
       }
       update_medication_inventory: {
         Args: { p_medication_id: string; p_new_quantity: number }

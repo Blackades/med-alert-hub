@@ -106,11 +106,11 @@ export const useMedicationCalendarData = (date: Date) => {
           
           if (status) {
             if (status.missed > 0) {
-              newCustomDayClassNames[dateStr] = 'bg-destructive/10 text-destructive font-medium hover:bg-destructive/20';
+              newCustomDayClassNames[dateStr] = 'bg-destructive/10 text-destructive font-medium hover:bg-destructive/20 border-destructive/20 transition-all duration-200';
             } else if (status.taken === status.total) {
-              newCustomDayClassNames[dateStr] = 'bg-primary/10 text-primary font-medium hover:bg-primary/20';
+              newCustomDayClassNames[dateStr] = 'bg-primary/10 text-primary font-medium hover:bg-primary/20 border-primary/20 transition-all duration-200';
             } else if (status.taken > 0) {
-              newCustomDayClassNames[dateStr] = 'bg-amber-500/10 text-amber-500 font-medium hover:bg-amber-500/20';
+              newCustomDayClassNames[dateStr] = 'bg-amber-500/10 text-amber-500 font-medium hover:bg-amber-500/20 border-amber-500/20 transition-all duration-200';
             }
           }
           

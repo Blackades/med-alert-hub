@@ -15,6 +15,8 @@ type MedicationContextType = {
   takeMedication: (id: string) => Promise<void>;
   skipMedication: (id: string) => Promise<void>;
   deleteMedication: (id: string) => Promise<void>;
+  refillMedication: (id: string, quantity: number) => Promise<void>;
+  getMedicationStreak: (id: string) => Promise<{ currentStreak: number; longestStreak: number }>;
 };
 
 const MedicationContext = createContext<MedicationContextType | undefined>(undefined);
@@ -162,7 +164,8 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
 
       if (scheduleError) throw scheduleError;
 
-      const { error } = await supabase.functions.invoke('schedule-next-dose', {
+      // Invoke the enhanced schedule-next-dose function
+      const { data, error } = await supabase.functions.invoke('schedule-next-dose', {
         body: {
           medicationId: id,
           currentDose: new Date().toISOString(),
@@ -170,6 +173,7 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) throw error;
+      console.log("Schedule next dose response:", data);
 
       await fetchMedications();
 
@@ -178,6 +182,7 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
         description: "Great job keeping up with your medication schedule!",
       });
     } catch (error: any) {
+      console.error("Error taking medication:", error);
       toast({
         title: "Error updating medication",
         description: error.message,
@@ -188,12 +193,34 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
 
   const skipMedication = async (id: string) => {
     try {
-      const { error } = await supabase
+      // Call the schedule-next-dose function with skipNextDose flag
+      const { error } = await supabase.functions.invoke('schedule-next-dose', {
+        body: {
+          medicationId: id,
+          currentDose: new Date().toISOString(),
+          skipNextDose: true
+        },
+      });
+
+      if (error) throw error;
+
+      // Update local state
+      const { error: scheduleError } = await supabase
         .from('medication_schedules')
         .update({ taken: true })
         .eq('medication_id', id);
 
-      if (error) throw error;
+      if (scheduleError) throw scheduleError;
+
+      // Log the skipped medication
+      await supabase
+        .from('medication_logs')
+        .insert({
+          medication_id: id,
+          scheduled_time: new Date().toISOString(),
+          status: 'skipped',
+          user_id: user?.id,
+        });
 
       await fetchMedications();
 
@@ -242,6 +269,76 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // New function to refill medication
+  const refillMedication = async (id: string, quantity: number) => {
+    try {
+      if (!quantity || quantity <= 0) {
+        throw new Error("Please enter a valid refill quantity");
+      }
+
+      const { data, error } = await supabase.functions.invoke('medication-refill', {
+        body: {
+          medicationId: id,
+          refillQuantity: quantity,
+          date: new Date().toISOString(),
+        },
+      });
+
+      if (error) throw error;
+      console.log("Refill response:", data);
+
+      toast({
+        title: "Medication refilled",
+        description: `Added ${quantity} units to your inventory.`,
+        className: "bg-primary/10 border-primary",
+      });
+
+      await fetchMedications();
+      return data;
+    } catch (error: any) {
+      console.error("Error refilling medication:", error);
+      toast({
+        title: "Error refilling medication",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  // New function to get medication streak information
+  const getMedicationStreak = async (id: string) => {
+    try {
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data, error } = await supabase.functions.invoke('medication-streaks', {
+        body: {
+          userId: user.id,
+          medicationId: id,
+        },
+      });
+
+      if (error) throw error;
+
+      // Find the specific medication streak data
+      const medicationStreak = data?.find((streak: any) => streak.medicationId === id);
+      
+      if (!medicationStreak) {
+        return { currentStreak: 0, longestStreak: 0 };
+      }
+      
+      return {
+        currentStreak: medicationStreak.currentStreak || 0,
+        longestStreak: medicationStreak.longestStreak || 0
+      };
+    } catch (error: any) {
+      console.error("Error getting medication streak:", error);
+      return { currentStreak: 0, longestStreak: 0 };
+    }
+  };
+
   const sortedMedications = Array.isArray(medications) 
     ? medications
         .map(getMedicationStatus)
@@ -265,6 +362,8 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
         takeMedication,
         skipMedication,
         deleteMedication,
+        refillMedication,
+        getMedicationStreak
       }}
     >
       {children}
