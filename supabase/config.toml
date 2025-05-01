@@ -1,4 +1,3 @@
-
 project_id = "bjgcteapggmoiaudmslb"
 
 [api]
@@ -45,4 +44,10 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.mood-tracker]
+verify_jwt = true
+
+[functions.email-queue-ts]
+verify_jwt = false
+
+[functions.medication-alerts]
 verify_jwt = true
