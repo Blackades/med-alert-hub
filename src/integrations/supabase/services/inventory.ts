@@ -1,19 +1,38 @@
-
 import { supabase } from '../client';
 import { toast } from "@/components/ui/use-toast";
-import { useAuth } from "@/components/AuthProvider";
+import { User } from '@supabase/supabase-js';
+
+// Helper function to get current authenticated user
+export const getCurrentUser = async (): Promise<User> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user?.id) {
+    throw new Error("User not authenticated");
+  }
+  
+  return user;
+};
+
+// Helper function to show toast notification
+export const showNotification = (
+  title: string,
+  description: string,
+  variant: "default" | "destructive" = "default"
+) => {
+  toast({
+    title,
+    description,
+    variant,
+  });
+};
 
 // Helper function to track medication inventory
 export const updateMedicationInventory = async (medicationId: string, newQuantity: number) => {
   try {
     // Get the current user ID
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     
-    if (!user?.id) {
-      throw new Error("User not authenticated");
-    }
-    
-    // Using raw SQL query to avoid type issues
+    // Using upsert to handle both insert and update scenarios
     const { data, error } = await supabase
       .from('medication_inventory')
       .upsert({
@@ -27,14 +46,20 @@ export const updateMedicationInventory = async (medicationId: string, newQuantit
       });
     
     if (error) throw error;
+    
+    showNotification(
+      "Inventory Updated", 
+      `Medication quantity updated to ${newQuantity} units.`
+    );
+    
     return { success: true, data };
   } catch (error) {
     console.error('Error updating medication inventory:', error);
-    toast({
-      title: "Inventory Update Failed",
-      description: "There was a problem updating the medication inventory.",
-      variant: "destructive",
-    });
+    showNotification(
+      "Inventory Update Failed",
+      "There was a problem updating the medication inventory.",
+      "destructive"
+    );
     return { success: false, error };
   }
 };
@@ -46,12 +71,17 @@ export const refillMedication = async (
   notes?: string
 ) => {
   try {
+    // Get the current user to include in the payload
+    const user = await getCurrentUser();
+    
+    // Call the Supabase Edge Function with complete payload
     const response = await supabase.functions.invoke('medication-refill', {
       body: {
         medicationId,
         refillQuantity: quantity,
+        userId: user.id,
         date: new Date().toISOString(),
-        notes
+        notes: notes || null // Ensure consistent handling of optional notes
       }
     });
     
@@ -59,20 +89,25 @@ export const refillMedication = async (
       throw new Error(response.error.message || 'Failed to refill medication');
     }
     
-    toast({
-      title: "Medication Refilled",
-      description: `Successfully added ${quantity} units to your medication.`,
-      variant: "default",
-    });
+    showNotification(
+      "Medication Refilled",
+      `Successfully added ${quantity} units to your medication.`
+    );
+    
+    // After successful refill, update the local inventory to reflect new quantity
+    if (response.data?.newQuantity) {
+      // Update the local inventory with the new quantity returned from the server
+      await updateMedicationInventory(medicationId, response.data.newQuantity);
+    }
     
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error refilling medication:', error);
-    toast({
-      title: "Refill Failed",
-      description: "There was a problem refilling your medication.",
-      variant: "destructive",
-    });
+    showNotification(
+      "Refill Failed",
+      "There was a problem refilling your medication.",
+      "destructive"
+    );
     return { success: false, error };
   }
 };
