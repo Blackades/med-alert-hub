@@ -1,17 +1,26 @@
 
 import { supabase } from '../client';
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/components/AuthProvider";
 
 // Helper function to track medication inventory
 export const updateMedicationInventory = async (medicationId: string, newQuantity: number) => {
   try {
+    // Get the current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user?.id) {
+      throw new Error("User not authenticated");
+    }
+    
     // Using raw SQL query to avoid type issues
     const { data, error } = await supabase
       .from('medication_inventory')
       .upsert({
         medication_id: medicationId,
         current_quantity: newQuantity,
-        last_updated: new Date().toISOString()
+        last_updated: new Date().toISOString(),
+        user_id: user.id
       }, {
         onConflict: 'medication_id',
         ignoreDuplicates: false

@@ -162,7 +162,6 @@ export function MedicationInventory() {
                 
                 <Progress 
                   value={(item.current_quantity / item.max_quantity) * 100} 
-                  className="h-2"
                   className={cn("h-2", getProgressColor(
                     item.current_quantity, 
                     item.max_quantity, 
