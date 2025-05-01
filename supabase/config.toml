@@ -51,3 +51,6 @@ verify_jwt = false
 
 [functions.medication-alerts]
 verify_jwt = true
+
+[functions.demo-notification]
+verify_jwt = false
