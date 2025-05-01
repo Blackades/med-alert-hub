@@ -66,7 +66,7 @@ export type TimeSlot = {
 
 export type MedicationWithStatus = Medication & {
   nextDose: string;
-  status: 'upcoming' | 'overdue' | 'taken' | 'missed';
+  status: 'upcoming' | 'overdue' | 'taken' | 'missed' | 'upcoming';
   lastTaken?: string;
   next_reminder_at?: string;
   missed?: boolean;

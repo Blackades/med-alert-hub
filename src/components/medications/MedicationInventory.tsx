@@ -8,6 +8,7 @@ import { MedicationRefillDialog } from "./MedicationRefillDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/AuthProvider";
+import { cn } from "@/lib/utils";
 
 interface MedicationInventoryItem {
   id: string;
@@ -162,11 +163,11 @@ export function MedicationInventory() {
                 <Progress 
                   value={(item.current_quantity / item.max_quantity) * 100} 
                   className="h-2"
-                  indicatorClassName={getProgressColor(
+                  className={cn("h-2", getProgressColor(
                     item.current_quantity, 
                     item.max_quantity, 
                     item.refill_threshold
-                  )}
+                  ))}
                 />
                 
                 <div className="flex justify-between text-xs text-muted-foreground">
