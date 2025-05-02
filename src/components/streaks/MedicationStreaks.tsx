@@ -23,25 +23,36 @@ export const MedicationStreaks = () => {
   
   useEffect(() => {
     const loadStreaks = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
       
       setLoading(true);
-      const { success, data } = await getMedicationStreaks(user.id);
-      
-      if (success && data) {
-        // Map the returned data to match the StreakData type
-        const mappedStreaks: StreakData[] = Array.isArray(data) 
-          ? data.map((streak: MedicationStreak) => ({
-              medicationId: streak.medicationId || streak.medication_id || '',
-              medicationName: streak.medication_name || '',
-              currentStreak: streak.currentStreak || streak.current_streak || 0,
-              longestStreak: streak.longestStreak || streak.longest_streak || 0, 
-              adherenceRate: streak.adherenceRate || streak.adherence_rate || 0
-            }))
-          : [];
+      try {
+        console.log("Fetching streaks for user:", user.id);
+        const { success, data } = await getMedicationStreaks(user.id);
         
-        setStreaks(mappedStreaks);
-      } else {
+        if (success && data) {
+          console.log("Received streak data:", data);
+          // Map the returned data to match the StreakData type
+          const mappedStreaks: StreakData[] = Array.isArray(data) 
+            ? data.map((streak: MedicationStreak) => ({
+                medicationId: streak.medicationId || streak.medication_id || '',
+                medicationName: streak.medicationName || streak.medication_name || '',
+                currentStreak: streak.currentStreak || streak.current_streak || 0,
+                longestStreak: streak.longestStreak || streak.longest_streak || 0, 
+                adherenceRate: streak.adherenceRate || streak.adherence_rate || 0
+              }))
+            : [];
+          
+          setStreaks(mappedStreaks);
+        } else {
+          console.warn("No streak data received or error occurred");
+          setStreaks([]);
+        }
+      } catch (error) {
+        console.error("Error in loadStreaks:", error);
         setStreaks([]);
       }
       setLoading(false);

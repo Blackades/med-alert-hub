@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { toast } from "@/components/ui/use-toast";
 
@@ -48,29 +47,34 @@ export const getMedicationStreaks = async (userId: string): Promise<StreaksRespo
       throw new Error('User ID is required');
     }
 
+    console.log(`Requesting medication streaks for user ${userId}`);
+    
     const response = await supabase.functions.invoke('medication-streaks', {
       body: { userId },
     });
     
     if (response.error) {
+      console.error("Edge function error:", response.error);
       throw new Error(response.error.message || 'Failed to fetch medication streaks');
     }
+    
+    console.log("Medication streaks response:", response.data);
     
     // Ensure data is an array and normalize field names
     const streaksData = Array.isArray(response.data) ? response.data : [];
     
     // Normalize field names to camelCase
     const normalizedData = streaksData.map(streak => ({
-      medicationId: streak.medicationId || streak.medication_id,
-      medicationName: streak.medicationName || streak.medication_name,
+      medicationId: streak.medicationId || streak.medication_id || '',
+      medicationName: streak.medicationName || streak.medication_name || '',
       currentStreak: streak.currentStreak || streak.current_streak || 0,
       longestStreak: streak.longestStreak || streak.longest_streak || 0, 
       adherenceRate: streak.adherenceRate || streak.adherence_rate || 0,
-      userId: streak.userId || streak.user_id,
+      userId: streak.userId || streak.user_id || '',
       lastTaken: streak.lastTaken || streak.last_taken,
       // Keep original fields for compatibility
-      medication_id: streak.medicationId || streak.medication_id,
-      medication_name: streak.medicationName || streak.medication_name,
+      medication_id: streak.medicationId || streak.medication_id || '',
+      medication_name: streak.medicationName || streak.medication_name || '',
       current_streak: streak.currentStreak || streak.current_streak || 0,
       longest_streak: streak.longestStreak || streak.longest_streak || 0,
       adherence_rate: streak.adherenceRate || streak.adherence_rate || 0
@@ -96,7 +100,7 @@ export const getMedicationStreaks = async (userId: string): Promise<StreaksRespo
       resetErrorToastFlag();
     }
     
-    return { success: false, error, data: [] };
+    return { success: false, error: error as Error, data: [] };
   }
 };
 
@@ -152,7 +156,7 @@ export const getMedicationStreak = async (medicationId: string, userId: string):
     
     return { 
       success: false, 
-      error,
+      error: error as Error,
       data: { 
         medicationId, 
         userId,
