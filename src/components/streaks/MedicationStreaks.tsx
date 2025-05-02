@@ -32,10 +32,10 @@ export const MedicationStreaks = () => {
         // Map the returned data to match the StreakData type
         const mappedStreaks: StreakData[] = Array.isArray(data) 
           ? data.map((streak: MedicationStreak) => ({
-              medicationId: streak.medicationId || '',
-              medicationName: streak.medication_name || '',  // Use medication_name as defined in MedicationStreak type
-              currentStreak: streak.currentStreak || 0,
-              longestStreak: streak.longestStreak || 0, 
+              medicationId: streak.medicationId || streak.medication_id || '',
+              medicationName: streak.medication_name || '',
+              currentStreak: streak.currentStreak || streak.current_streak || 0,
+              longestStreak: streak.longestStreak || streak.longest_streak || 0, 
               adherenceRate: streak.adherenceRate || streak.adherence_rate || 0
             }))
           : [];

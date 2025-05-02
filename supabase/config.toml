@@ -42,7 +42,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.medication-streaks]
-verify_jwt = true
+verify_jwt = false
 
 [functions.mood-tracker]
 verify_jwt = true
