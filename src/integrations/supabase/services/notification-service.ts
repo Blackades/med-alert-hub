@@ -65,11 +65,11 @@ export const triggerNotification = async (options: NotificationRequest) => {
         variant: "default",
       });
     } else {
-      // Partial success (status 207) handling
+      // Partial success (status 207) handling - FIX: change variant to "default" instead of "warning"
       toast({
         title: "Notification Status",
         description: response.data?.message || "Notification request processed with warnings.",
-        variant: "warning",
+        variant: "default", // Changed from "warning" to "default"
       });
     }
 

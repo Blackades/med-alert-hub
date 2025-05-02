@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Flame, Award, TrendingUp, Medal } from "lucide-react";
 
-type StreakData = {
+// Define the StreakData type to match what's used in the component
+export type StreakData = {
   medicationId: string;
   medicationName: string;
   currentStreak: number;
@@ -28,8 +29,18 @@ export const MedicationStreaks = () => {
       const { success, data } = await getMedicationStreaks(user.id);
       
       if (success && data) {
-        // Ensure data is an array before setting it
-        setStreaks(Array.isArray(data) ? data : []);
+        // Map the returned data to match the StreakData type
+        const mappedStreaks: StreakData[] = Array.isArray(data) 
+          ? data.map(streak => ({
+              medicationId: streak.medication_id || streak.medicationId,
+              medicationName: streak.medication_name || '',
+              currentStreak: streak.current_streak || 0,
+              longestStreak: streak.longest_streak || 0,
+              adherenceRate: streak.adherence_rate || 0
+            }))
+          : [];
+        
+        setStreaks(mappedStreaks);
       } else {
         setStreaks([]);
       }

@@ -8,14 +8,17 @@ import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info } from "lucide-react";
-import { triggerDemoNotification, DemoNotificationType } from "@/integrations/supabase/services/demo";
+import { triggerDemoNotification } from "@/integrations/supabase/services/demo";
+
+// Define compatible notification types for the demo panel
+type DemoPanelNotificationType = "email" | "esp32" | "both";
 
 export const DemoModePanel = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { medications } = useMedications();
   const [selectedMedication, setSelectedMedication] = useState<string>("");
-  const [notificationType, setNotificationType] = useState<DemoNotificationType>("email");
+  const [notificationType, setNotificationType] = useState<DemoPanelNotificationType>("email");
   const [isLoading, setIsLoading] = useState(false);
   const [esp32Data, setEsp32Data] = useState<any>(null);
 
@@ -43,7 +46,7 @@ export const DemoModePanel = () => {
       const { success, data, error } = await triggerDemoNotification(
         user.id,
         selectedMedication,
-        notificationType
+        notificationType // Now this matches the expected type
       );
 
       if (!success) throw error;
@@ -99,7 +102,7 @@ export const DemoModePanel = () => {
 
             <div>
               <label className="text-sm font-medium mb-1 block">Notification Type</label>
-              <Tabs defaultValue="email" value={notificationType} onValueChange={(value) => setNotificationType(value as DemoNotificationType)}>
+              <Tabs defaultValue="email" value={notificationType} onValueChange={(value) => setNotificationType(value as DemoPanelNotificationType)}>
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="email" className="flex items-center gap-2">
                     <Mail className="h-4 w-4" /> Email
