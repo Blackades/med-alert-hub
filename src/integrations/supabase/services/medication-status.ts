@@ -118,7 +118,7 @@ export const markMedicationAsSkipped = async (medicationId: string, reason?: str
       description: reason 
         ? `Medication marked as skipped: ${reason}`
         : "Medication has been marked as skipped.",
-      variant: "warning", // Using warning variant to differentiate from "taken" actions
+      variant: "default", // Changed from "warning" to "default"
     });
     
     return { success: true, data };

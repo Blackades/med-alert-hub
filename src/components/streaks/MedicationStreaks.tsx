@@ -35,7 +35,7 @@ export const MedicationStreaks = () => {
               medicationId: streak.medicationId || streak.medication_id || '',
               medicationName: streak.medicationName || streak.medication_name || '',
               currentStreak: streak.currentStreak || streak.current_streak || 0,
-              longestStreak: streak.longestStreak || streak.longest_streak || 0,
+              longestStreak: streak.longestStreak || streak.longest_streak || 0, 
               adherenceRate: streak.adherenceRate || streak.adherence_rate || 0
             }))
           : [];
