@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { toast } from "@/components/ui/use-toast";
 
@@ -24,6 +25,16 @@ export interface StreaksResponse {
   data: MedicationStreak[] | MedicationStreak;
   error?: Error;
 }
+
+// Track if an error toast is already shown to prevent duplicates
+let errorToastShown = false;
+
+// Reset the error toast flag after some time
+const resetErrorToastFlag = () => {
+  setTimeout(() => {
+    errorToastShown = false;
+  }, 5000); // Reset after 5 seconds
+};
 
 /**
  * Function to get medication streaks for a user
@@ -65,14 +76,26 @@ export const getMedicationStreaks = async (userId: string): Promise<StreaksRespo
       adherence_rate: streak.adherenceRate || streak.adherence_rate || 0
     }));
     
+    // Reset the error toast flag since we have successful data
+    errorToastShown = false;
+    
     return { success: true, data: normalizedData };
   } catch (error) {
     console.error('Error fetching medication streaks:', error);
-    toast({
-      title: "Error",
-      description: "Could not load medication streak information.",
-      variant: "destructive",
-    });
+    
+    // Only show toast if one isn't already displayed
+    if (!errorToastShown) {
+      errorToastShown = true;
+      toast({
+        title: "Error",
+        description: "Could not load medication streak information.",
+        variant: "destructive",
+      });
+      
+      // Reset the flag after some time
+      resetErrorToastFlag();
+    }
+    
     return { success: false, error, data: [] };
   }
 };
@@ -123,6 +146,10 @@ export const getMedicationStreak = async (medicationId: string, userId: string):
     };
   } catch (error) {
     console.error('Error fetching specific medication streak:', error);
+    
+    // We don't show a toast here as the main function already shows one
+    // and we don't want to flood the screen with error messages
+    
     return { 
       success: false, 
       error,
