@@ -318,10 +318,20 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
       if (!success) {
         throw new Error("Failed to fetch streak information");
       }
-      return {
-        currentStreak: data?.currentStreak || 0,
-        longestStreak: data?.longestStreak || 0
-      };
+      
+      // Handle both typed and untyped responses
+      if (typeof data === 'object' && data !== null) {
+        // Handle single streak object
+        const streak = Array.isArray(data) ? data[0] : data;
+        return {
+          currentStreak: (streak.currentStreak !== undefined) ? streak.currentStreak : 
+                         ((streak as any).current_streak !== undefined ? (streak as any).current_streak : 0),
+          longestStreak: (streak.longestStreak !== undefined) ? streak.longestStreak : 
+                         ((streak as any).longest_streak !== undefined ? (streak as any).longest_streak : 0)
+        };
+      }
+      
+      return { currentStreak: 0, longestStreak: 0 };
     } catch (error: any) {
       console.error("Error getting medication streak:", error);
       return { currentStreak: 0, longestStreak: 0 };

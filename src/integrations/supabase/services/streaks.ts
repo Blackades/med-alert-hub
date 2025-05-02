@@ -10,6 +10,13 @@ export interface MedicationStreak {
   currentStreak: number;
   longestStreak: number;
   lastTaken?: string; // ISO date string
+  // Support for backend response format
+  medication_id?: string;
+  medication_name?: string;
+  current_streak?: number;
+  longest_streak?: number;
+  adherence_rate?: number;
+  adherenceRate?: number;
 }
 
 export interface StreaksResponse {
@@ -38,10 +45,27 @@ export const getMedicationStreaks = async (userId: string): Promise<StreaksRespo
       throw new Error(response.error.message || 'Failed to fetch medication streaks');
     }
     
-    // Ensure data is an array
+    // Ensure data is an array and normalize field names
     const streaksData = Array.isArray(response.data) ? response.data : [];
     
-    return { success: true, data: streaksData };
+    // Normalize field names to camelCase
+    const normalizedData = streaksData.map(streak => ({
+      medicationId: streak.medicationId || streak.medication_id,
+      medicationName: streak.medicationName || streak.medication_name,
+      currentStreak: streak.currentStreak || streak.current_streak || 0,
+      longestStreak: streak.longestStreak || streak.longest_streak || 0, 
+      adherenceRate: streak.adherenceRate || streak.adherence_rate || 0,
+      userId: streak.userId || streak.user_id,
+      lastTaken: streak.lastTaken || streak.last_taken,
+      // Keep original fields for compatibility
+      medication_id: streak.medicationId || streak.medication_id,
+      medication_name: streak.medicationName || streak.medication_name,
+      current_streak: streak.currentStreak || streak.current_streak || 0,
+      longest_streak: streak.longestStreak || streak.longest_streak || 0,
+      adherence_rate: streak.adherenceRate || streak.adherence_rate || 0
+    }));
+    
+    return { success: true, data: normalizedData };
   } catch (error) {
     console.error('Error fetching medication streaks:', error);
     toast({
@@ -77,16 +101,25 @@ export const getMedicationStreak = async (medicationId: string, userId: string):
     }
     
     // Find the specific medication streak
-    const medicationStreak = data.find(streak => streak.medicationId === medicationId);
+    const medicationStreak = data.find(streak => 
+      streak.medicationId === medicationId || streak.medication_id === medicationId
+    );
+    
+    const defaultStreak: MedicationStreak = { 
+      medicationId, 
+      userId, 
+      currentStreak: 0, 
+      longestStreak: 0,
+      medication_id: medicationId,
+      current_streak: 0,
+      longest_streak: 0,
+      adherence_rate: 0,
+      adherenceRate: 0
+    };
     
     return { 
       success: true, 
-      data: medicationStreak || { 
-        medicationId, 
-        userId, 
-        currentStreak: 0, 
-        longestStreak: 0 
-      } 
+      data: medicationStreak || defaultStreak
     };
   } catch (error) {
     console.error('Error fetching specific medication streak:', error);
@@ -97,7 +130,12 @@ export const getMedicationStreak = async (medicationId: string, userId: string):
         medicationId, 
         userId,
         currentStreak: 0, 
-        longestStreak: 0 
+        longestStreak: 0,
+        medication_id: medicationId,
+        current_streak: 0,
+        longest_streak: 0,
+        adherence_rate: 0,
+        adherenceRate: 0
       } 
     };
   }

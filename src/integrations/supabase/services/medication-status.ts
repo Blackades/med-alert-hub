@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { toast } from "@/components/ui/use-toast";
 
@@ -98,7 +99,6 @@ export const scheduleNextDose = async (medicationId: string) => {
   }
 };
 
-// Function that has the warning variant issue:
 export const markMedicationAsSkipped = async (medicationId: string, reason?: string) => {
   try {
     // Call the edge function
@@ -118,7 +118,7 @@ export const markMedicationAsSkipped = async (medicationId: string, reason?: str
       description: reason 
         ? `Medication marked as skipped: ${reason}`
         : "Medication has been marked as skipped.",
-      variant: "default", // Changed from "warning" to "default"
+      variant: "warning", // Using warning variant to differentiate from "taken" actions
     });
     
     return { success: true, data };
