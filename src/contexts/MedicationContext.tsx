@@ -324,10 +324,8 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
         // Handle single streak object
         const streak = Array.isArray(data) ? data[0] : data;
         return {
-          currentStreak: (streak.currentStreak !== undefined) ? streak.currentStreak : 
-                         ((streak as any).current_streak !== undefined ? (streak as any).current_streak : 0),
-          longestStreak: (streak.longestStreak !== undefined) ? streak.longestStreak : 
-                         ((streak as any).longest_streak !== undefined ? (streak as any).longest_streak : 0)
+          currentStreak: streak.currentStreak ?? streak.current_streak ?? 0,
+          longestStreak: streak.longestStreak ?? streak.longest_streak ?? 0
         };
       }
       
