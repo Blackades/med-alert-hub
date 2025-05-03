@@ -38,7 +38,7 @@ export const MedicationStreaks = () => {
             // Copy all properties from the service streak
             ...streak,
             // Ensure required properties for the component interface exist
-            id: streak.id || streak.medicationId || streak.medication_id || '',
+            id: streak.medicationId || streak.medication_id || '',
             last_taken_at: streak.lastTaken || new Date().toISOString(),
             created_at: streak.created_at || new Date().toISOString(),
             updated_at: streak.updated_at || new Date().toISOString(),
