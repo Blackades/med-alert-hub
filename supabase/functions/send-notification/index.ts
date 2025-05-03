@@ -23,6 +23,8 @@ const handleCors = (req: Request): Response | null => {
 
 // Serve the HTTP request
 serve(async (req: Request): Promise<Response> => {
+  console.log("Received request to send-notification endpoint");
+  
   // Handle CORS preflight request
   const corsResponse = handleCors(req);
   if (corsResponse) {
@@ -32,6 +34,7 @@ serve(async (req: Request): Promise<Response> => {
   try {
     // Parse request body
     const requestData = await req.json();
+    console.log("Request data:", requestData);
     
     // Get Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -54,6 +57,8 @@ serve(async (req: Request): Promise<Response> => {
         }
       );
     }
+    
+    console.log(`Processing ${notificationType} notification for user ${userId}`);
     
     // Log the notification request
     await supabase.from("notification_logs").insert({
@@ -88,7 +93,7 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({
         success: false,
-        message: error.message || "Error processing notification request",
+        message: error instanceof Error ? error.message : "Error processing notification request",
       }),
       {
         status: 500,

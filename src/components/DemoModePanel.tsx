@@ -8,7 +8,7 @@ import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info } from "lucide-react";
-import { triggerDemoNotification } from "@/integrations/supabase/services/demo";
+import { triggerDemoNotification } from "@/integrations/supabase/services/notification-service";
 
 // Define compatible notification types for the demo panel
 type DemoPanelNotificationType = "email" | "esp32" | "both";
@@ -43,16 +43,22 @@ export const DemoModePanel = () => {
 
     setIsLoading(true);
     try {
+      console.log("Triggering demo with:", { 
+        user: user.id, 
+        medication: selectedMedication, 
+        type: notificationType 
+      });
+      
       const { success, data, error } = await triggerDemoNotification(
         user.id,
         selectedMedication,
-        notificationType // Now this matches the expected type
+        notificationType
       );
 
       if (!success) throw error;
 
       if (notificationType === 'esp32' || notificationType === 'both') {
-        setEsp32Data(data.notifications || data.esp32Data?.notifications || []);
+        setEsp32Data(data?.notifications || []);
       }
 
       toast({

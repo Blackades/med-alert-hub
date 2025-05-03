@@ -48,32 +48,47 @@ export const triggerNotification = async (options: NotificationRequest) => {
       throw new Error('Missing required notification parameters');
     }
 
-    // Call the edge function
-    const response = await supabase.functions.invoke('send-notification', {
-      body: options,
-    });
+    console.log("Sending notification with options:", options);
 
-    if (response.error) {
-      throw new Error(response.error.message || 'Failed to trigger notification');
-    }
-
-    // Show a success toast if appropriate
-    if (response.data?.success) {
+    // Try the demo-notification endpoint first for better compatibility
+    try {
+      const response = await supabase.functions.invoke('demo-notification', {
+        body: options,
+      });
+      
+      if (response.error) {
+        console.warn("Demo notification endpoint failed, trying fallback:", response.error);
+        throw new Error("Demo endpoint failed, using fallback");
+      }
+      
+      // Show a success toast
       toast({
         title: "Notification Sent",
-        description: response.data.message || "Notification has been sent successfully.",
+        description: response.data?.message || "Notification has been sent successfully.",
         variant: "default",
       });
-    } else {
-      // Partial success (status 207) handling - FIX: change variant to "default" instead of "warning"
-      toast({
-        title: "Notification Status",
-        description: response.data?.message || "Notification request processed with warnings.",
-        variant: "default", // Changed from "warning" to "default"
+      
+      return { success: true, data: response.data as NotificationResponse };
+    } catch (demoError) {
+      // Fallback to send-notification endpoint
+      console.log("Falling back to send-notification endpoint");
+      const response = await supabase.functions.invoke('send-notification', {
+        body: options,
       });
-    }
 
-    return { success: true, data: response.data as NotificationResponse };
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to trigger notification');
+      }
+
+      // Show a success toast
+      toast({
+        title: "Notification Sent",
+        description: response.data?.message || "Notification has been sent successfully.",
+        variant: "default",
+      });
+      
+      return { success: true, data: response.data as NotificationResponse };
+    }
   } catch (error) {
     console.error('Error triggering notification:', error);
     toast({
@@ -87,7 +102,6 @@ export const triggerNotification = async (options: NotificationRequest) => {
 
 /**
  * Legacy function to maintain compatibility with existing code
- * @deprecated Use triggerNotification instead
  */
 export const triggerDemoNotification = async (
   userId: string, 
@@ -95,13 +109,14 @@ export const triggerDemoNotification = async (
   notificationType: 'email' | 'esp32' | 'both'
 ) => {
   try {
-    // Map the old type to the new type for backward compatibility
-    const mappedType: NotificationType = notificationType as NotificationType;
+    console.log(`Triggering demo notification: userId=${userId}, medicationId=${medicationId}, type=${notificationType}`);
     
+    // Add a custom message to make it clear this is a demo
     return await triggerNotification({
       userId,
       medicationId,
-      notificationType: mappedType,
+      notificationType: notificationType as NotificationType,
+      customMessage: "This is a DEMO notification from MedTracker.",
       priorityLevel: 'medium',
     });
   } catch (error) {

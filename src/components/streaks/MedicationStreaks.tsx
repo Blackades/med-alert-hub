@@ -39,7 +39,7 @@ export const MedicationStreaks = () => {
           const mappedStreaks: StreakData[] = Array.isArray(data) 
             ? data.map((streak: MedicationStreak) => ({
                 medicationId: streak.medicationId || streak.medication_id || '',
-                medicationName: streak.medicationName || streak.medication_name || '',
+                medicationName: streak.medication_name || '', // Fix: Use medication_name instead of medicationName
                 currentStreak: streak.currentStreak || streak.current_streak || 0,
                 longestStreak: streak.longestStreak || streak.longest_streak || 0, 
                 adherenceRate: streak.adherenceRate || streak.adherence_rate || 0
