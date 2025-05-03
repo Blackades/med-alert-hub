@@ -33,7 +33,9 @@ export const MedicationStreaks = () => {
         if (error) throw new Error(error.message);
         
         if (data) {
-          setStreaks(data);
+          // Ensure data is always an array before setting state
+          const streaksArray = Array.isArray(data) ? data : [data];
+          setStreaks(streaksArray);
         }
       } catch (error) {
         console.error("Error loading medication streaks:", error);

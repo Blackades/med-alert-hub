@@ -199,9 +199,9 @@ export const getESP32NotificationData = async () => {
  */
 export const processEmailQueue = async () => {
   try {
+    // Remove the query parameter and pass mode as part of the body
     const { data, error } = await supabase.functions.invoke('email-queue-ts', {
-      body: {},
-      query: { mode: 'process' }
+      body: { mode: 'process' }
     });
     
     if (error) throw error;
