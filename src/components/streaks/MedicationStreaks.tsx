@@ -2,16 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Award } from "lucide-react";
-import { getMedicationStreaks } from "@/integrations/supabase/services/streaks";
+import { getMedicationStreaks, MedicationStreak as ServiceMedicationStreak } from "@/integrations/supabase/services/streaks";
 import { useAuth } from "@/components/AuthProvider";
 import { toast } from "@/hooks/use-toast";
 
-export interface MedicationStreak {
+// Update interface to match the service's interface plus the additional properties needed
+export interface MedicationStreak extends ServiceMedicationStreak {
   id: string;
-  medication_id: string;
-  medication_name?: string; // This can be undefined initially
-  current_streak: number;
-  longest_streak: number;
   last_taken_at: string;
   created_at: string;
   updated_at: string;
@@ -35,7 +32,19 @@ export const MedicationStreaks = () => {
         if (data) {
           // Ensure data is always an array before setting state
           const streaksArray = Array.isArray(data) ? data : [data];
-          setStreaks(streaksArray);
+          
+          // Map the returned data to match our component's expected interface
+          const typedStreaks: MedicationStreak[] = streaksArray.map(streak => ({
+            // Copy all properties from the service streak
+            ...streak,
+            // Ensure required properties for the component interface exist
+            id: streak.id || streak.medicationId || streak.medication_id || '',
+            last_taken_at: streak.lastTaken || new Date().toISOString(),
+            created_at: streak.created_at || new Date().toISOString(),
+            updated_at: streak.updated_at || new Date().toISOString(),
+          }));
+          
+          setStreaks(typedStreaks);
         }
       } catch (error) {
         console.error("Error loading medication streaks:", error);
