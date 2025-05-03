@@ -95,10 +95,40 @@ serve(async (req: Request): Promise<Response> => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     
+    // Handle direct test email
+    if (requestData.testMode && requestData.recipientEmail) {
+      console.log(`[${requestId}] Processing test email to ${requestData.recipientEmail}`);
+      
+      try {
+        const result = await sendEmailDirectly(
+          requestData.recipientEmail,
+          requestData.subject || "Test Email from MedTracker",
+          requestData.message || "This is a test email from MedTracker.",
+          requestId
+        );
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: `Test email sent to ${requestData.recipientEmail}`,
+            details: result,
+            requestId
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      } catch (error) {
+        console.error(`[${requestId}] Test email error:`, error);
+        throw error;
+      }
+    }
+    
     // Process the notification request
     const { userId, medicationId, notificationType, customMessage, priorityLevel, scheduleTime } = requestData;
     
-    // Validate required parameters
+    // Validate required parameters for normal notification
     if (!userId || !medicationId || !notificationType) {
       console.error(`[${requestId}] Missing required parameters:`, {
         userId,

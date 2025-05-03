@@ -8,12 +8,18 @@ export type PriorityLevel = 'low' | 'medium' | 'high' | 'urgent';
 
 // Request interface that matches the backend Zod schema
 export interface NotificationRequest {
-  userId: string;
-  medicationId: string;
-  notificationType: NotificationType;
+  userId?: string;
+  medicationId?: string;
+  notificationType?: NotificationType;
   customMessage?: string;
   priorityLevel?: PriorityLevel;
   scheduleTime?: string; // ISO string
+  
+  // Direct email params for test emails
+  recipientEmail?: string;
+  subject?: string;
+  message?: string;
+  testMode?: boolean;
 }
 
 // Response interface
@@ -38,16 +44,7 @@ export interface NotificationResponse {
  */
 export const triggerNotification = async (options: NotificationRequest) => {
   try {
-    // Set default priority level if not provided
-    if (!options.priorityLevel) {
-      options.priorityLevel = 'medium';
-    }
-
-    // Validate required fields
-    if (!options.userId || !options.medicationId || !options.notificationType) {
-      throw new Error('Missing required notification parameters');
-    }
-
+    // For tracking function execution
     console.log("Sending notification with options:", options);
     
     // Send notification directly using the send-notification endpoint
@@ -106,7 +103,6 @@ export const triggerDemoNotification = async (
   } catch (error) {
     console.error('Error triggering demo notification:', error);
     
-    // Show only one error toast
     toast({
       title: "Error",
       description: "Could not trigger demo notification.",
@@ -138,7 +134,6 @@ export const scheduleNotification = async (options: NotificationRequest & { sche
   } catch (error) {
     console.error('Error scheduling notification:', error);
     
-    // Show only one error toast
     toast({
       title: "Error",
       description: error instanceof Error ? error.message : "Could not schedule notification.",
@@ -163,25 +158,6 @@ export const getESP32NotificationData = async () => {
     return { success: true, data };
   } catch (error) {
     console.error('Error getting ESP32 notification data:', error);
-    return { success: false, error, data: null };
-  }
-};
-
-/**
- * Process the email queue manually - for admins or debugging
- * Note: This function is kept for backward compatibility
- * but emails are now sent directly in the send-notification function
- */
-export const processEmailQueue = async () => {
-  try {
-    toast({
-      title: "Information",
-      description: "Emails are now sent immediately. No need to process queue.",
-      variant: "default",
-    });
-    return { success: true, data: { message: "Emails are now sent immediately" } };
-  } catch (error) {
-    console.error('Error processing email queue:', error);
     return { success: false, error, data: null };
   }
 };
