@@ -7,7 +7,9 @@ import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info, RefreshCw } from "lucide-react";
-import { triggerDemoNotification, processEmailQueue } from "@/integrations/supabase/services/notification-service";
+import { triggerDemoNotification } from "@/integrations/supabase/services/notification-service";
+// Import processEmailQueue directly from the file where it's defined
+import { processEmailQueue } from "@/integrations/supabase/services/notification-service";
 
 // Define compatible notification types for the demo panel
 type DemoPanelNotificationType = "email" | "esp32" | "both";
