@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { toast } from "@/hooks/use-toast";
 
@@ -141,6 +140,41 @@ export const scheduleNotification = async (options: NotificationRequest & { sche
     });
     
     return { success: false, error, data: null };
+  }
+};
+
+/**
+ * Process the email notification queue manually
+ * This function will call the API endpoint to process pending email notifications
+ */
+export const processEmailQueue = async () => {
+  try {
+    const response = await supabase.functions.invoke('process-email-queue', {
+      method: 'POST',
+    });
+    
+    if (response.error) {
+      console.error("Process email queue error:", response.error);
+      throw new Error(response.error.message || 'Failed to process email queue');
+    }
+    
+    console.log("Process email queue response:", response.data);
+    
+    return { 
+      success: true, 
+      data: response.data,
+      result: {
+        processed: response.data?.processed || 0,
+        failed: response.data?.failed || 0,
+      }
+    };
+  } catch (error) {
+    console.error('Error processing email queue:', error);
+    return { 
+      success: false, 
+      error, 
+      data: null 
+    };
   }
 };
 
