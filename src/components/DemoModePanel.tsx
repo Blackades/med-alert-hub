@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info, RefreshCw } from "lucide-react";
-import { triggerDemoNotification, processEmailQueue } from "@/integrations/supabase/services/notification-service";
+import { triggerDemoNotification } from "@/integrations/supabase/services/notification-service";
 
 // Define compatible notification types for the demo panel
 type DemoPanelNotificationType = "email" | "esp32" | "both";
@@ -83,9 +82,22 @@ export const DemoModePanel = () => {
   const handleProcessEmailQueue = async () => {
     setIsProcessingEmails(true);
     try {
-      const { success, data, error } = await processEmailQueue();
+      // Since processEmailQueue is not available from the notification service,
+      // we need to implement this functionality here or call the appropriate API
       
-      if (!success) throw error;
+      // Placeholder implementation - replace with actual implementation
+      const response = await fetch('/api/notifications/process-email-queue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to process email queue');
+      }
       
       toast({
         title: "Email Queue Processed",
