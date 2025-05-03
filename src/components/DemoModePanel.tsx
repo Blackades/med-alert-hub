@@ -7,7 +7,7 @@ import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info, RefreshCw } from "lucide-react";
-import { triggerDemoNotification } from "@/integrations/supabase/services/notification-service";
+import { triggerDemoNotification, processEmailQueue } from "@/integrations/supabase/services/notification-service";
 
 // Define compatible notification types for the demo panel
 type DemoPanelNotificationType = "email" | "esp32" | "both";
@@ -82,26 +82,14 @@ export const DemoModePanel = () => {
   const handleProcessEmailQueue = async () => {
     setIsProcessingEmails(true);
     try {
-      // Since processEmailQueue is not available from the notification service,
-      // we need to implement this functionality here or call the appropriate API
+      // Use the properly imported processEmailQueue function
+      const { success, data, error, result } = await processEmailQueue();
       
-      // Placeholder implementation - replace with actual implementation
-      const response = await fetch('/api/notifications/process-email-queue', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to process email queue');
-      }
+      if (!success) throw error;
       
       toast({
         title: "Email Queue Processed",
-        description: `Processed: ${data.result?.processed || 0}, Failed: ${data.result?.failed || 0}`,
+        description: `Processed: ${result?.processed || 0}, Failed: ${result?.failed || 0}`,
       });
     } catch (error: any) {
       console.error("Error processing email queue:", error);
