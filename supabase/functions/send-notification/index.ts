@@ -21,9 +21,15 @@ const handleCors = (req: Request): Response | null => {
   return null;
 };
 
+// Generate a unique request ID for tracing
+const generateRequestId = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+};
+
 // Serve the HTTP request
 serve(async (req: Request): Promise<Response> => {
-  console.log("Received request to send-notification endpoint");
+  const requestId = generateRequestId();
+  console.log(`[${requestId}] Received request to send-notification endpoint`);
   
   // Handle CORS preflight request
   const corsResponse = handleCors(req);
@@ -34,7 +40,7 @@ serve(async (req: Request): Promise<Response> => {
   try {
     // Parse request body
     const requestData = await req.json();
-    console.log("Request data:", requestData);
+    console.log(`[${requestId}] Request data:`, JSON.stringify(requestData));
     
     // Get Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -46,10 +52,17 @@ serve(async (req: Request): Promise<Response> => {
     
     // Validate required parameters
     if (!userId || !medicationId || !notificationType) {
+      console.error(`[${requestId}] Missing required parameters:`, {
+        userId,
+        medicationId,
+        notificationType
+      });
+      
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: "Missing required parameters" 
+          message: "Missing required parameters",
+          requestId 
         }),
         { 
           status: 400, 
@@ -58,10 +71,36 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
     
-    console.log(`Processing ${notificationType} notification for user ${userId}`);
+    console.log(`[${requestId}] Processing ${notificationType} notification for user ${userId}`);
+    
+    // Retrieve user data for notification
+    const { data: userData, error: userError } = await supabase
+      .from("profiles")
+      .select("email, phone_number")
+      .eq("id", userId)
+      .single();
+      
+    if (userError) {
+      console.error(`[${requestId}] Error fetching user data: ${userError.message}`);
+    } else {
+      console.log(`[${requestId}] Found user data:`, userData);
+    }
+    
+    // Get medication details
+    const { data: medication, error: medError } = await supabase
+      .from("medications")
+      .select("name, dosage, instructions")
+      .eq("id", medicationId)
+      .single();
+      
+    if (medError) {
+      console.error(`[${requestId}] Error fetching medication data: ${medError.message}`);
+    } else {
+      console.log(`[${requestId}] Medication data:`, medication);
+    }
     
     // Log the notification request
-    await supabase.from("notification_logs").insert({
+    const { data: logData, error: logError } = await supabase.from("notification_logs").insert({
       user_id: userId,
       medication_id: medicationId,
       notification_type: notificationType,
@@ -69,9 +108,49 @@ serve(async (req: Request): Promise<Response> => {
       scheduled_time: scheduleTime || new Date().toISOString(),
       content: {
         custom_message: customMessage,
+        medication: medication || { name: "Unknown", dosage: "Unknown" }
       },
-      request_id: crypto.randomUUID(),
-    });
+      request_id: requestId,
+    }).select();
+    
+    if (logError) {
+      console.error(`[${requestId}] Error logging notification: ${logError.message}`);
+    } else {
+      console.log(`[${requestId}] Notification logged with ID: ${logData?.[0]?.id}`);
+    }
+    
+    // Handle email notification if requested
+    if (["email", "both", "all"].includes(notificationType)) {
+      if (userData?.email) {
+        const emailContent = `
+          <h2>Medication Reminder</h2>
+          <p>It's time to take your medication: ${medication?.name || "your medication"}</p>
+          <p>Dosage: ${medication?.dosage || "as prescribed"}</p>
+          ${customMessage ? `<p>Note: ${customMessage}</p>` : ""}
+        `;
+        
+        const { data: emailData, error: emailError } = await supabase.from("email_queue").insert({
+          email: userData.email,
+          user_id: userId,
+          subject: `Medication Reminder: ${medication?.name || "Time to take your medication"}`,
+          body: emailContent,
+          status: "pending",
+          created_at: new Date().toISOString(),
+          metadata: {
+            medication_id: medicationId,
+            request_id: requestId
+          }
+        }).select();
+        
+        if (emailError) {
+          console.error(`[${requestId}] Error queueing email: ${emailError.message}`);
+        } else {
+          console.log(`[${requestId}] Email queued successfully with ID: ${emailData?.[0]?.id}`);
+        }
+      } else {
+        console.warn(`[${requestId}] Email notification requested but user has no email address`);
+      }
+    }
     
     // Return success response
     return new Response(
@@ -79,7 +158,7 @@ serve(async (req: Request): Promise<Response> => {
         success: true,
         message: "Notification processed successfully",
         timestamp: new Date().toISOString(),
-        requestId: crypto.randomUUID(),
+        requestId: requestId,
       }),
       {
         status: 200,
@@ -88,12 +167,14 @@ serve(async (req: Request): Promise<Response> => {
     );
   } catch (error) {
     // Handle errors
-    console.error("Error processing notification:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[${requestId}] Error processing notification: ${errorMessage}`, error);
     
     return new Response(
       JSON.stringify({
         success: false,
-        message: error instanceof Error ? error.message : "Error processing notification request",
+        message: errorMessage,
+        requestId
       }),
       {
         status: 500,

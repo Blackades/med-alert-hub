@@ -7,8 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Mail, Smartphone, Info } from "lucide-react";
-import { triggerDemoNotification } from "@/integrations/supabase/services/notification-service";
+import { Loader2, Mail, Smartphone, Info, RefreshCw } from "lucide-react";
+import { triggerDemoNotification, processEmailQueue } from "@/integrations/supabase/services/notification-service";
 
 // Define compatible notification types for the demo panel
 type DemoPanelNotificationType = "email" | "esp32" | "both";
@@ -20,6 +20,7 @@ export const DemoModePanel = () => {
   const [selectedMedication, setSelectedMedication] = useState<string>("");
   const [notificationType, setNotificationType] = useState<DemoPanelNotificationType>("email");
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingEmails, setIsProcessingEmails] = useState(false);
   const [esp32Data, setEsp32Data] = useState<any>(null);
 
   const handleTriggerDemo = async () => {
@@ -57,6 +58,8 @@ export const DemoModePanel = () => {
 
       if (!success) throw error;
 
+      console.log("Demo notification response:", data);
+      
       if (notificationType === 'esp32' || notificationType === 'both') {
         setEsp32Data(data?.notifications || []);
       }
@@ -74,6 +77,29 @@ export const DemoModePanel = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleProcessEmailQueue = async () => {
+    setIsProcessingEmails(true);
+    try {
+      const { success, data, error } = await processEmailQueue();
+      
+      if (!success) throw error;
+      
+      toast({
+        title: "Email Queue Processed",
+        description: `Processed: ${data.result?.processed || 0}, Failed: ${data.result?.failed || 0}`,
+      });
+    } catch (error: any) {
+      console.error("Error processing email queue:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process email queue",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingEmails(false);
     }
   };
 
@@ -121,20 +147,40 @@ export const DemoModePanel = () => {
               </Tabs>
             </div>
 
-            <Button 
-              onClick={handleTriggerDemo} 
-              disabled={isLoading || !selectedMedication}
-              className="mt-2"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Triggering...
-                </>
-              ) : (
-                "Trigger Demo Notification"
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleTriggerDemo} 
+                disabled={isLoading || !selectedMedication}
+                className="flex-1"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Triggering...
+                  </>
+                ) : (
+                  "Trigger Demo Notification"
+                )}
+              </Button>
+              
+              <Button 
+                onClick={handleProcessEmailQueue} 
+                disabled={isProcessingEmails}
+                variant="outline"
+              >
+                {isProcessingEmails ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Process Emails
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           {esp32Data && esp32Data.length > 0 && (

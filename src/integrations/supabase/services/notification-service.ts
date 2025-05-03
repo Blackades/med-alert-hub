@@ -1,6 +1,6 @@
 
 import { supabase } from '../client';
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 // Types that match backend schema
 export type NotificationType = 'email' | 'sms' | 'esp32' | 'both' | 'all';
@@ -50,26 +50,31 @@ export const triggerNotification = async (options: NotificationRequest) => {
 
     console.log("Sending notification with options:", options);
 
-    // Try the demo-notification endpoint first for better compatibility
+    // Try the demo-notification endpoint first
     try {
-      const response = await supabase.functions.invoke('demo-notification', {
+      const demoResponse = await supabase.functions.invoke('demo-notification', {
         body: options,
       });
       
-      if (response.error) {
-        console.warn("Demo notification endpoint failed, trying fallback:", response.error);
-        throw new Error("Demo endpoint failed, using fallback");
+      if (demoResponse.error) {
+        console.warn("Demo notification endpoint error:", demoResponse.error);
+        throw new Error(`Demo endpoint failed: ${demoResponse.error.message || "Unknown error"}`);
       }
+      
+      console.log("Demo notification endpoint response:", demoResponse.data);
       
       // Show a success toast
       toast({
         title: "Notification Sent",
-        description: response.data?.message || "Notification has been sent successfully.",
+        description: demoResponse.data?.message || "Notification has been sent successfully.",
         variant: "default",
       });
       
-      return { success: true, data: response.data as NotificationResponse };
+      return { success: true, data: demoResponse.data as NotificationResponse };
     } catch (demoError) {
+      // Log the error from demo endpoint
+      console.warn("Falling back to send-notification endpoint due to error:", demoError);
+      
       // Fallback to send-notification endpoint
       console.log("Falling back to send-notification endpoint");
       const response = await supabase.functions.invoke('send-notification', {
@@ -77,8 +82,11 @@ export const triggerNotification = async (options: NotificationRequest) => {
       });
 
       if (response.error) {
+        console.error("Send notification endpoint error:", response.error);
         throw new Error(response.error.message || 'Failed to trigger notification');
       }
+      
+      console.log("Send notification endpoint response:", response.data);
 
       // Show a success toast
       toast({
@@ -91,11 +99,14 @@ export const triggerNotification = async (options: NotificationRequest) => {
     }
   } catch (error) {
     console.error('Error triggering notification:', error);
+    
+    // Show only one error toast
     toast({
       title: "Error",
       description: error instanceof Error ? error.message : "Could not trigger notification.",
       variant: "destructive",
     });
+    
     return { success: false, error, data: null };
   }
 };
@@ -121,11 +132,14 @@ export const triggerDemoNotification = async (
     });
   } catch (error) {
     console.error('Error triggering demo notification:', error);
+    
+    // Show only one error toast
     toast({
       title: "Error",
       description: "Could not trigger demo notification.",
       variant: "destructive",
     });
+    
     return { success: false, error, data: null };
   }
 };
@@ -150,11 +164,14 @@ export const scheduleNotification = async (options: NotificationRequest & { sche
     return await triggerNotification(options);
   } catch (error) {
     console.error('Error scheduling notification:', error);
+    
+    // Show only one error toast
     toast({
       title: "Error",
       description: error instanceof Error ? error.message : "Could not schedule notification.",
       variant: "destructive",
     });
+    
     return { success: false, error, data: null };
   }
 };
@@ -173,6 +190,26 @@ export const getESP32NotificationData = async () => {
     return { success: true, data };
   } catch (error) {
     console.error('Error getting ESP32 notification data:', error);
+    return { success: false, error, data: null };
+  }
+};
+
+/**
+ * Process the email queue manually - for admins or debugging
+ */
+export const processEmailQueue = async () => {
+  try {
+    const { data, error } = await supabase.functions.invoke('email-queue-ts', {
+      body: {},
+      query: { mode: 'process' }
+    });
+    
+    if (error) throw error;
+    
+    console.log("Email queue processing results:", data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error processing email queue:', error);
     return { success: false, error, data: null };
   }
 };
