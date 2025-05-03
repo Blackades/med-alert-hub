@@ -40,8 +40,9 @@ export const MedicationStreaks = () => {
             // Ensure required properties for the component interface exist
             id: streak.medicationId || streak.medication_id || '',
             last_taken_at: streak.lastTaken || new Date().toISOString(),
-            created_at: streak.created_at || new Date().toISOString(),
-            updated_at: streak.updated_at || new Date().toISOString(),
+            // Add these properties explicitly as they don't exist in the service interface
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           }));
           
           setStreaks(typedStreaks);
