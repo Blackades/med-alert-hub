@@ -49,54 +49,27 @@ export const triggerNotification = async (options: NotificationRequest) => {
     }
 
     console.log("Sending notification with options:", options);
+    
+    // Send notification directly using the send-notification endpoint
+    const response = await supabase.functions.invoke('send-notification', {
+      body: options,
+    });
 
-    // Try the demo-notification endpoint first
-    try {
-      const demoResponse = await supabase.functions.invoke('demo-notification', {
-        body: options,
-      });
-      
-      if (demoResponse.error) {
-        console.warn("Demo notification endpoint error:", demoResponse.error);
-        throw new Error(`Demo endpoint failed: ${demoResponse.error.message || "Unknown error"}`);
-      }
-      
-      console.log("Demo notification endpoint response:", demoResponse.data);
-      
-      // Show a success toast
-      toast({
-        title: "Notification Sent",
-        description: demoResponse.data?.message || "Notification has been sent successfully.",
-        variant: "default",
-      });
-      
-      return { success: true, data: demoResponse.data as NotificationResponse };
-    } catch (demoError) {
-      // Log the error from demo endpoint
-      console.warn("Falling back to send-notification endpoint due to error:", demoError);
-      
-      // Fallback to send-notification endpoint
-      console.log("Falling back to send-notification endpoint");
-      const response = await supabase.functions.invoke('send-notification', {
-        body: options,
-      });
-
-      if (response.error) {
-        console.error("Send notification endpoint error:", response.error);
-        throw new Error(response.error.message || 'Failed to trigger notification');
-      }
-      
-      console.log("Send notification endpoint response:", response.data);
-
-      // Show a success toast
-      toast({
-        title: "Notification Sent",
-        description: response.data?.message || "Notification has been sent successfully.",
-        variant: "default",
-      });
-      
-      return { success: true, data: response.data as NotificationResponse };
+    if (response.error) {
+      console.error("Send notification endpoint error:", response.error);
+      throw new Error(response.error.message || 'Failed to trigger notification');
     }
+    
+    console.log("Send notification endpoint response:", response.data);
+
+    // Show a success toast
+    toast({
+      title: "Notification Sent",
+      description: response.data?.message || "Notification has been sent successfully.",
+      variant: "default",
+    });
+    
+    return { success: true, data: response.data as NotificationResponse };
   } catch (error) {
     console.error('Error triggering notification:', error);
     
@@ -196,18 +169,17 @@ export const getESP32NotificationData = async () => {
 
 /**
  * Process the email queue manually - for admins or debugging
+ * Note: This function is kept for backward compatibility
+ * but emails are now sent directly in the send-notification function
  */
 export const processEmailQueue = async () => {
   try {
-    // Remove the query parameter and pass mode as part of the body
-    const { data, error } = await supabase.functions.invoke('email-queue-ts', {
-      body: { mode: 'process' }
+    toast({
+      title: "Information",
+      description: "Emails are now sent immediately. No need to process queue.",
+      variant: "default",
     });
-    
-    if (error) throw error;
-    
-    console.log("Email queue processing results:", data);
-    return { success: true, data };
+    return { success: true, data: { message: "Emails are now sent immediately" } };
   } catch (error) {
     console.error('Error processing email queue:', error);
     return { success: false, error, data: null };

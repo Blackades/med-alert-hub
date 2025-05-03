@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,11 @@ import { Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
+import { triggerNotification } from "@/integrations/supabase/services/notification-service";
 
 interface UserSettingsDialogProps {
   onSave: (settings: { email: string; phoneNumber: string }) => void;
-  children?: React.ReactNode; // Added children prop
+  children?: React.ReactNode;
 }
 
 export const UserSettingsDialog = ({ onSave, children }: UserSettingsDialogProps) => {
@@ -56,19 +58,40 @@ export const UserSettingsDialog = ({ onSave, children }: UserSettingsDialogProps
       return;
     }
 
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User information not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSending(true);
     try {
-      const { error } = await supabase.functions.invoke('send-notification', {
-        body: {
-          email: email,
-          medication: "Test Medication",
-          dosage: "1 pill",
-          scheduledTime: new Date().toLocaleTimeString(),
-          isReminder: true,
-        },
+      // Find first medication for testing
+      const { data: medications } = await supabase
+        .from('medications')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .limit(1);
+      
+      const medicationId = medications && medications.length > 0 
+        ? medications[0].id 
+        : "00000000-0000-0000-0000-000000000000";
+      
+      const medicationName = medications && medications.length > 0 
+        ? medications[0].name 
+        : "Test Medication";
+
+      const { success, error } = await triggerNotification({
+        userId: user.id,
+        medicationId: medicationId,
+        notificationType: "email",
+        customMessage: `This is a test email sent to verify your notification settings. Your email address ${email} has been configured correctly.`,
       });
 
-      if (error) throw error;
+      if (!success) throw error;
 
       toast({
         title: "Test email sent",
