@@ -1,18 +1,22 @@
+
 // Implementation of the send-notification edge function
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+
 // Initialize Resend client for email sending
 const resendApiKey = Deno.env.get("RESEND_API_KEY");
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
+
 // Define CORS headers to enable cross-origin requests
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
+
 // Handle CORS preflight requests
-const handleCors = (req)=>{
+const handleCors = (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
@@ -21,12 +25,14 @@ const handleCors = (req)=>{
   }
   return null;
 };
+
 // Generate a unique request ID for tracing
-const generateRequestId = ()=>{
+const generateRequestId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
+
 // Format email content for medication reminders
-const formatEmailContent = (medication, customMessage)=>{
+const formatEmailContent = (medication, customMessage) => {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 5px;">
       <h2 style="color: #333; border-bottom: 1px solid #eaeaea; padding-bottom: 10px;">Medication Reminder</h2>
@@ -40,8 +46,9 @@ const formatEmailContent = (medication, customMessage)=>{
     </div>
   `;
 };
+
 // Direct email sending function with proper error handling
-const sendEmailDirectly = async (to, subject, html, requestId)=>{
+const sendEmailDirectly = async (to, subject, html, requestId) => {
   if (!resend) {
     console.error(`[${requestId}] Resend API key is not configured`);
     return {
@@ -49,18 +56,19 @@ const sendEmailDirectly = async (to, subject, html, requestId)=>{
       error: "Email service is not properly configured"
     };
   }
+  
   try {
     console.log(`[${requestId}] Sending email directly to ${to}`);
     const appName = Deno.env.get("APP_NAME") || "MedTracker";
     const fromEmail = Deno.env.get("FROM_EMAIL") || "notifications@medtracker.app";
+    
     const result = await resend.emails.send({
       from: `${appName} <${fromEmail}>`,
-      to: [
-        to
-      ],
+      to: [to],
       subject: subject,
       html: html
     });
+    
     console.log(`[${requestId}] Email sent successfully:`, result);
     return {
       success: true,
@@ -74,8 +82,9 @@ const sendEmailDirectly = async (to, subject, html, requestId)=>{
     };
   }
 };
+
 // Safe database operation wrapper with better error handling
-const safeDbOperation = async (operation, fallback = null, requestId)=>{
+const safeDbOperation = async (operation, fallback = null, requestId) => {
   try {
     const result = await operation();
     return result;
@@ -87,15 +96,18 @@ const safeDbOperation = async (operation, fallback = null, requestId)=>{
     };
   }
 };
+
 // Main request handler with improved error handling
-serve(async (req)=>{
+serve(async (req) => {
   const requestId = generateRequestId();
   console.log(`[${requestId}] Received request to send-notification endpoint`);
+  
   // Handle CORS preflight request
   const corsResponse = handleCors(req);
   if (corsResponse) {
     return corsResponse;
   }
+  
   try {
     // Parse request body safely
     let requestData;
@@ -116,9 +128,11 @@ serve(async (req)=>{
         }
       });
     }
+    
     // Get Supabase client with validation
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error(`[${requestId}] Missing Supabase configuration`);
       return new Response(JSON.stringify({
@@ -133,6 +147,7 @@ serve(async (req)=>{
         }
       });
     }
+    
     // Create client with error handling
     let supabase;
     try {
@@ -151,10 +166,18 @@ serve(async (req)=>{
         }
       });
     }
+    
     // Handle direct test email mode
     if (requestData.testMode === true && requestData.recipientEmail) {
       console.log(`[${requestId}] Processing test email to ${requestData.recipientEmail}`);
-      const emailResult = await sendEmailDirectly(requestData.recipientEmail, requestData.subject || "Test Email from MedTracker", requestData.message || "This is a test email from MedTracker.", requestId);
+      
+      const emailResult = await sendEmailDirectly(
+        requestData.recipientEmail,
+        requestData.subject || "Test Email from MedTracker",
+        requestData.message || "This is a test email from MedTracker.",
+        requestId
+      );
+      
       if (!emailResult.success) {
         return new Response(JSON.stringify({
           success: false,
@@ -168,6 +191,7 @@ serve(async (req)=>{
           }
         });
       }
+      
       return new Response(JSON.stringify({
         success: true,
         message: `Test email sent to ${requestData.recipientEmail}`,
@@ -181,15 +205,13 @@ serve(async (req)=>{
         }
       });
     }
+    
     // Process the notification request
-    const { userId, medicationId, notificationType, customMessage, priorityLevel, scheduleTime } = requestData;
+    const { userId, medicationId, notificationType, customMessage, priorityLevel, scheduleTime, demoMode } = requestData;
+    
     // Validate required parameters for normal notification
     if (!userId || !medicationId || !notificationType) {
-      console.error(`[${requestId}] Missing required parameters:`, {
-        userId,
-        medicationId,
-        notificationType
-      });
+      console.error(`[${requestId}] Missing required parameters:`, { userId, medicationId, notificationType });
       return new Response(JSON.stringify({
         success: false,
         message: "Missing required parameters. userId, medicationId, and notificationType are required.",
@@ -202,52 +224,73 @@ serve(async (req)=>{
         }
       });
     }
-    console.log(`[${requestId}] Processing ${notificationType} notification for user ${userId}`);
+    
+    console.log(`[${requestId}] Processing ${notificationType} notification for user ${userId}${demoMode ? " (DEMO MODE)" : ""}`);
+    
+    // If in demo mode and we have a specific demo recipient email
+    let userData = null;
+    let fakeUser = false;
+    
     // Retrieve user data for notification with robust error handling
-    // Use .maybeSingle() instead of .single() to handle empty results gracefully
-    const userResult = await safeDbOperation(async ()=>{
-      const { data, error } = await supabase.from("profiles").select("email, phone_number").eq("id", userId).maybeSingle();
-      if (error) throw error;
-      // Use a more graceful handling of missing users
-      return {
-        data: data || null,
-        error: null
+    if (!demoMode) {
+      // Use .maybeSingle() instead of .single() to handle empty results gracefully
+      const userResult = await safeDbOperation(async () => {
+        const { data, error } = await supabase.from("profiles").select("email, phone_number").eq("id", userId).maybeSingle();
+        if (error) throw error;
+        // Use a more graceful handling of missing users
+        return {
+          data: data || null,
+          error: null
+        };
+      }, null, requestId);
+      
+      if (userResult.error) {
+        console.error(`[${requestId}] User data fetch error:`, userResult.error);
+        return new Response(JSON.stringify({
+          success: false,
+          message: `Failed to fetch user data: ${userResult.error.message || "Database error"}`,
+          requestId
+        }), {
+          status: 404,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
+      }
+      
+      // Add specific handling for missing users
+      if (!userResult.data) {
+        console.error(`[${requestId}] User with ID ${userId} not found`);
+        return new Response(JSON.stringify({
+          success: false,
+          message: `User with ID ${userId} not found`,
+          requestId
+        }), {
+          status: 404,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
+      }
+      
+      userData = userResult.data;
+    } else {
+      // Create fake user data for demo mode
+      console.log(`[${requestId}] Using demo mode with placeholder user data`);
+      userData = {
+        email: "demo@example.com",
+        phone_number: "+1234567890"
       };
-    }, null, requestId);
-    if (userResult.error) {
-      console.error(`[${requestId}] User data fetch error:`, userResult.error);
-      return new Response(JSON.stringify({
-        success: false,
-        message: `Failed to fetch user data: ${userResult.error.message || "Database error"}`,
-        requestId
-      }), {
-        status: 404,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
-      });
+      fakeUser = true;
     }
-    // Add specific handling for missing users
-    if (!userResult.data) {
-      console.error(`[${requestId}] User with ID ${userId} not found`);
-      return new Response(JSON.stringify({
-        success: false,
-        message: `User with ID ${userId} not found`,
-        requestId
-      }), {
-        status: 404,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
-      });
-    }
-    const userData = userResult.data;
+    
     console.log(`[${requestId}] Found user data:`, userData);
+    
     // Get medication details with proper error handling
     // Use .maybeSingle() instead of .single() to handle empty results gracefully
-    const medResult = await safeDbOperation(async ()=>{
+    const medResult = await safeDbOperation(async () => {
       const { data, error } = await supabase.from("medications").select("name, dosage, instructions").eq("id", medicationId).maybeSingle();
       if (error) throw error;
       // Just return the data, even if null
@@ -256,6 +299,7 @@ serve(async (req)=>{
         error: null
       };
     }, null, requestId);
+    
     if (medResult.error) {
       console.error(`[${requestId}] Medication data fetch error:`, medResult.error);
       return new Response(JSON.stringify({
@@ -270,6 +314,7 @@ serve(async (req)=>{
         }
       });
     }
+    
     // Add specific handling for missing medications
     if (!medResult.data) {
       console.error(`[${requestId}] Medication with ID ${medicationId} not found`);
@@ -281,8 +326,10 @@ serve(async (req)=>{
         instructions: "as directed by your healthcare provider"
       };
     }
+    
     const medication = medResult.data;
     console.log(`[${requestId}] Medication data:`, medication);
+    
     // Log the notification request in a try-catch block to prevent failure
     try {
       await supabase.from("notification_logs").insert({
@@ -305,51 +352,67 @@ serve(async (req)=>{
       // Non-critical error, just log it
       console.warn(`[${requestId}] Failed to log notification: ${logError.message}`);
     }
+    
     // Process notifications based on type
     const notifications = [];
+    
     // Handle email notification if requested and user has email
-    if ([
-      "email",
-      "both",
-      "all"
-    ].includes(notificationType)) {
+    if (['email', 'both', 'all'].includes(notificationType)) {
       if (userData?.email) {
         console.log(`[${requestId}] Processing email notification to ${userData.email}`);
+        
         // Format email content
         const emailSubject = `Medication Reminder: ${medication?.name || "Time to take your medication"}`;
         const emailContent = formatEmailContent(medication, customMessage);
-        // Send email directly
-        const emailResult = await sendEmailDirectly(userData.email, emailSubject, emailContent, requestId);
-        if (emailResult.success) {
+        
+        if (demoMode) {
+          // In demo mode, don't actually send the email but simulate success
+          console.log(`[${requestId}] DEMO MODE: Would send email to ${userData.email}`);
+          console.log(`[${requestId}] DEMO MODE: Email content would be: ${emailContent.substring(0, 100)}...`);
+          
           notifications.push({
             success: true,
             channel: "email",
             timestamp: new Date().toISOString(),
-            message: `Email sent to ${userData.email}`,
-            details: emailResult.result
+            message: `DEMO: Email would be sent to ${userData.email}`,
+            demo: true
           });
-          // Update notification log with delivery details - non-critical operation
-          try {
-            await supabase.from("notification_logs").update({
-              delivered: true,
-              delivery_details: {
-                email: {
-                  sent: true,
-                  timestamp: new Date().toISOString()
-                }
-              },
-              updated_at: new Date().toISOString()
-            }).eq("request_id", requestId);
-          } catch (updateError) {
-            console.warn(`[${requestId}] Failed to update notification log: ${updateError.message}`);
-          }
         } else {
-          notifications.push({
-            success: false,
-            channel: "email",
-            timestamp: new Date().toISOString(),
-            message: `Failed to send email: ${emailResult.error}`
-          });
+          // Send email directly in normal mode
+          const emailResult = await sendEmailDirectly(userData.email, emailSubject, emailContent, requestId);
+          
+          if (emailResult.success) {
+            notifications.push({
+              success: true,
+              channel: "email",
+              timestamp: new Date().toISOString(),
+              message: `Email sent to ${userData.email}`,
+              details: emailResult.result
+            });
+            
+            // Update notification log with delivery details - non-critical operation
+            try {
+              await supabase.from("notification_logs").update({
+                delivered: true,
+                delivery_details: {
+                  email: {
+                    sent: true,
+                    timestamp: new Date().toISOString()
+                  }
+                },
+                updated_at: new Date().toISOString()
+              }).eq("request_id", requestId);
+            } catch (updateError) {
+              console.warn(`[${requestId}] Failed to update notification log: ${updateError.message}`);
+            }
+          } else {
+            notifications.push({
+              success: false,
+              channel: "email",
+              timestamp: new Date().toISOString(),
+              message: `Failed to send email: ${emailResult.error}`
+            });
+          }
         }
       } else {
         console.warn(`[${requestId}] Email notification requested but user has no email address`);
@@ -361,27 +424,26 @@ serve(async (req)=>{
         });
       }
     }
+    
     // Handle ESP32 notification (placeholder)
-    if ([
-      "esp32",
-      "both",
-      "all"
-    ].includes(notificationType)) {
+    if (['esp32', 'both', 'all'].includes(notificationType)) {
       // This is just a placeholder that will be implemented in the future
       notifications.push({
         success: true,
         channel: "esp32",
         timestamp: new Date().toISOString(),
-        message: "ESP32 notification processed"
+        message: demoMode ? "DEMO: ESP32 notification simulated" : "ESP32 notification processed"
       });
     }
+    
     // Return success response with all notification results
     return new Response(JSON.stringify({
       success: true,
-      message: "Notification processing completed",
+      message: demoMode ? "Demo notification processing completed" : "Notification processing completed",
       notifications,
       timestamp: new Date().toISOString(),
-      requestId
+      requestId,
+      demoMode: demoMode || false
     }), {
       status: 200,
       headers: {
@@ -395,6 +457,7 @@ serve(async (req)=>{
     const errorStack = error instanceof Error ? error.stack : "";
     console.error(`[${requestId}] Unhandled error processing notification:`, errorMessage);
     if (errorStack) console.error(`[${requestId}] Error stack:`, errorStack);
+    
     return new Response(JSON.stringify({
       success: false,
       message: `Server error: ${errorMessage}`,

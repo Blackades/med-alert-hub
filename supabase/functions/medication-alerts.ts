@@ -114,6 +114,9 @@ serve(async (req) => {
       
       console.log(`[${requestId}] Sending medication alert for med ${medicationId} to user ${userId}`);
       
+      // Add this flag for demo mode to differentiate between actual users and demo requests
+      const isDemoMode = body.demoMode === true;
+      
       // Fetch the user to verify they exist
       const { data: user, error: userError } = await supabaseAdmin
         .from('profiles')
@@ -135,18 +138,25 @@ serve(async (req) => {
         });
       }
       
+      // For demo mode, if user not found, create a placeholder for testing
       if (!user) {
-        console.error(`[${requestId}] User with ID ${userId} not found`);
-        return new Response(JSON.stringify({
-          success: false,
-          error: `User with ID ${userId} not found`
-        }), {
-          status: 404,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          }
-        });
+        console.warn(`[${requestId}] User with ID ${userId} not found`);
+        
+        if (isDemoMode) {
+          console.log(`[${requestId}] Running in demo mode - will proceed with placeholder user data`);
+          // Continue with a placeholder user for demo purposes
+        } else {
+          return new Response(JSON.stringify({
+            success: false,
+            error: `User with ID ${userId} not found`
+          }), {
+            status: 404,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json"
+            }
+          });
+        }
       }
       
       // Fetch the medication
@@ -184,8 +194,8 @@ serve(async (req) => {
         });
       }
       
-      // Check that medication belongs to the user
-      if (medication.user_id !== userId) {
+      // Check that medication belongs to the user (skip in demo mode)
+      if (!isDemoMode && medication.user_id !== userId) {
         console.error(`[${requestId}] Medication does not belong to user: med.user_id=${medication.user_id}, userId=${userId}`);
         return new Response(JSON.stringify({
           success: false,
@@ -203,9 +213,10 @@ serve(async (req) => {
       const alertPayload = {
         userId,
         medicationId,
-        notificationType: notificationType || user.notification_preferences?.default_type || 'email',
+        notificationType: notificationType || (user?.notification_preferences?.default_type || 'email'),
         customMessage: `Time to take your ${medication.name} (${medication.dosage})`,
         priorityLevel: 'high',
+        demoMode: isDemoMode // Pass the demo mode flag to the send-notification function
       };
       
       console.log(`[${requestId}] Sending notification with payload:`, alertPayload);

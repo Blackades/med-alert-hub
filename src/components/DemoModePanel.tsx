@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,30 +34,25 @@ export const DemoModePanel = () => {
       return;
     }
 
-    if (!user?.id) {
-      toast({
-        title: "Error",
-        description: "User information not available",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Allow demo mode to work even without a user ID
+    const userId = user?.id || "demo-user-id";
 
     setIsLoading(true);
     try {
       console.log("Triggering demo with:", { 
-        user: user.id, 
+        user: userId, 
         medication: selectedMedication, 
         type: notificationType 
       });
       
-      // Make a direct POST request to the medication-alerts function
+      // Make a direct POST request to the medication-alerts function with demoMode flag
       const { data, error } = await supabase.functions.invoke('medication-alerts', {
         method: 'POST',
         body: { 
-          userId: user.id,
+          userId: userId,
           medicationId: selectedMedication,
-          notificationType
+          notificationType,
+          demoMode: true // Specify this is a demo request
         }
       });
 
@@ -199,6 +195,13 @@ export const DemoModePanel = () => {
           {esp32Data && esp32Data.length === 0 && (
             <div className="mt-4 border rounded-md p-4 bg-white">
               <p className="text-sm text-muted-foreground">No pending ESP32 notifications found.</p>
+            </div>
+          )}
+          
+          {!user && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-700 text-sm">
+              <p className="font-medium">Note: You are using demo mode while not logged in.</p>
+              <p className="mt-1">All notifications will be simulated and not sent to real email addresses.</p>
             </div>
           )}
         </div>

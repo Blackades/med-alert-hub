@@ -14,6 +14,7 @@ export interface NotificationRequest {
   customMessage?: string;
   priorityLevel?: PriorityLevel;
   scheduleTime?: string; // ISO string
+  demoMode?: boolean; // Add demoMode flag
   
   // Direct email params for test emails
   recipientEmail?: string;
@@ -98,7 +99,8 @@ export const triggerDemoNotification = async (
       body: {
         userId,
         medicationId,
-        notificationType
+        notificationType,
+        demoMode: true // Always use demo mode for this function
       }
     });
 
