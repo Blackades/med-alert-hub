@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info, RefreshCw } from "lucide-react";
 import { triggerDemoNotification, processEmailQueue } from "@/integrations/supabase/services/notification-service";
+import { supabase } from "@/integrations/supabase/client";
 
 // Define compatible notification types for the demo panel
 type DemoPanelNotificationType = "email" | "esp32" | "both";
