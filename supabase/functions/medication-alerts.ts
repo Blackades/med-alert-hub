@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
 
@@ -87,7 +88,7 @@ serve(async (req) => {
         .from('profiles')
         .select('id, email, display_name, notification_preferences')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       if (userError || !user) {
         throw new Error(`User with ID ${userId} not found`);
@@ -98,7 +99,7 @@ serve(async (req) => {
         .from('medications')
         .select('*')
         .eq('id', medicationId)
-        .single();
+        .maybeSingle();
       
       if (medError || !medication) {
         throw new Error(`Medication with ID ${medicationId} not found`);
@@ -173,4 +174,3 @@ serve(async (req) => {
 });
 
 console.log("Medication alerts function initialized");
-
