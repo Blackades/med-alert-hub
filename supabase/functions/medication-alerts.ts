@@ -93,10 +93,10 @@ serve(async (req) => {
         });
       }
       
-      const { userId, medicationId, notificationType } = body;
+      const { userId, medicationId, notificationType, demoMode } = body;
       
       // Log received parameters for debugging
-      console.log(`[${requestId}] Received parameters:`, { userId, medicationId, notificationType });
+      console.log(`[${requestId}] Received parameters:`, { userId, medicationId, notificationType, demoMode });
       
       if (!userId || !medicationId) {
         console.error(`[${requestId}] Missing required fields: userId=${userId}, medicationId=${medicationId}`);
@@ -115,7 +115,8 @@ serve(async (req) => {
       console.log(`[${requestId}] Sending medication alert for med ${medicationId} to user ${userId}`);
       
       // Add this flag for demo mode to differentiate between actual users and demo requests
-      const isDemoMode = body.demoMode === true;
+      const isDemoMode = demoMode === true;
+      console.log(`[${requestId}] Demo mode: ${isDemoMode ? "ENABLED" : "DISABLED"}`);
       
       // Fetch the user to verify they exist
       const { data: user, error: userError } = await supabaseAdmin
@@ -138,13 +139,21 @@ serve(async (req) => {
         });
       }
       
+      let placeholderUser = null;
+      
       // For demo mode, if user not found, create a placeholder for testing
       if (!user) {
         console.warn(`[${requestId}] User with ID ${userId} not found`);
         
         if (isDemoMode) {
           console.log(`[${requestId}] Running in demo mode - will proceed with placeholder user data`);
-          // Continue with a placeholder user for demo purposes
+          // Create a placeholder user for demo purposes
+          placeholderUser = {
+            id: userId,
+            email: "demo@example.com",
+            display_name: "Demo User",
+            notification_preferences: { default_type: "email" }
+          };
         } else {
           return new Response(JSON.stringify({
             success: false,
@@ -158,6 +167,8 @@ serve(async (req) => {
           });
         }
       }
+      
+      const effectiveUser = user || placeholderUser;
       
       // Fetch the medication
       const { data: medication, error: medError } = await supabaseAdmin
@@ -180,23 +191,40 @@ serve(async (req) => {
         });
       }
       
+      let placeholderMedication = null;
+      
       if (!medication) {
-        console.error(`[${requestId}] Medication with ID ${medicationId} not found`);
-        return new Response(JSON.stringify({
-          success: false,
-          error: `Medication with ID ${medicationId} not found`
-        }), {
-          status: 404,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          }
-        });
+        console.warn(`[${requestId}] Medication with ID ${medicationId} not found`);
+        
+        if (isDemoMode) {
+          console.log(`[${requestId}] Running in demo mode - will proceed with placeholder medication data`);
+          // Create a placeholder medication for demo purposes
+          placeholderMedication = {
+            id: medicationId,
+            name: "Demo Medication",
+            dosage: "10mg",
+            instructions: "Take with water",
+            user_id: userId
+          };
+        } else {
+          return new Response(JSON.stringify({
+            success: false,
+            error: `Medication with ID ${medicationId} not found`
+          }), {
+            status: 404,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json"
+            }
+          });
+        }
       }
       
+      const effectiveMedication = medication || placeholderMedication;
+      
       // Check that medication belongs to the user (skip in demo mode)
-      if (!isDemoMode && medication.user_id !== userId) {
-        console.error(`[${requestId}] Medication does not belong to user: med.user_id=${medication.user_id}, userId=${userId}`);
+      if (!isDemoMode && effectiveMedication && effectiveMedication.user_id !== userId) {
+        console.error(`[${requestId}] Medication does not belong to user: med.user_id=${effectiveMedication.user_id}, userId=${userId}`);
         return new Response(JSON.stringify({
           success: false,
           error: "Medication does not belong to this user"
@@ -213,8 +241,8 @@ serve(async (req) => {
       const alertPayload = {
         userId,
         medicationId,
-        notificationType: notificationType || (user?.notification_preferences?.default_type || 'email'),
-        customMessage: `Time to take your ${medication.name} (${medication.dosage})`,
+        notificationType: notificationType || (effectiveUser?.notification_preferences?.default_type || 'email'),
+        customMessage: `Time to take your ${effectiveMedication?.name} (${effectiveMedication?.dosage})`,
         priorityLevel: 'high',
         demoMode: isDemoMode // Pass the demo mode flag to the send-notification function
       };
@@ -247,8 +275,9 @@ serve(async (req) => {
       // Return success
       return new Response(JSON.stringify({
         success: true,
-        message: `Alert sent for ${medication.name}`,
-        details: notificationResult
+        message: `Alert sent for ${effectiveMedication?.name}`,
+        details: notificationResult,
+        demoMode: isDemoMode
       }), {
         headers: {
           ...corsHeaders,

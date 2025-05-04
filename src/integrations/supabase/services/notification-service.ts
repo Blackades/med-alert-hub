@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { toast } from "@/hooks/use-toast";
 
@@ -47,10 +46,16 @@ export const triggerNotification = async (options: NotificationRequest) => {
   try {
     // For tracking function execution
     console.log("Sending notification with options:", options);
+
+    // Always ensure demoMode is explicitly set in the request
+    const requestOptions = {
+      ...options,
+      demoMode: options.demoMode === true
+    };
     
     // Send notification directly using the send-notification endpoint
     const response = await supabase.functions.invoke('send-notification', {
-      body: options,
+      body: requestOptions,
     });
 
     if (response.error) {
@@ -68,7 +73,7 @@ export const triggerNotification = async (options: NotificationRequest) => {
     });
     
     return { success: true, data: response.data as NotificationResponse };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error triggering notification:', error);
     
     // Show only one error toast
@@ -93,26 +98,15 @@ export const triggerDemoNotification = async (
   try {
     console.log(`Triggering demo notification: userId=${userId}, medicationId=${medicationId}, type=${notificationType}`);
     
-    // Direct call to the medication-alerts function with required parameters
-    const { data, error } = await supabase.functions.invoke('medication-alerts', {
-      method: 'POST',
-      body: {
-        userId,
-        medicationId,
-        notificationType,
-        demoMode: true // Always use demo mode for this function
-      }
+    // Use the new triggerNotification function with demoMode=true
+    return await triggerNotification({
+      userId,
+      medicationId,
+      notificationType,
+      demoMode: true,
+      customMessage: "This is a demo notification"
     });
-
-    if (error) {
-      console.error('Medication alerts function error:', error);
-      throw new Error(error.message || 'Failed to trigger demo notification');
-    }
-    
-    console.log('Medication alerts response:', data);
-    
-    return { success: true, data };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error triggering demo notification:', error);
     
     toast({

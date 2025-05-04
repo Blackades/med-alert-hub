@@ -8,7 +8,7 @@ import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info, RefreshCw } from "lucide-react";
-import { triggerDemoNotification, processEmailQueue } from "@/integrations/supabase/services/notification-service";
+import { triggerNotification, processEmailQueue } from "@/integrations/supabase/services/notification-service";
 import { supabase } from "@/integrations/supabase/client";
 
 // Define compatible notification types for the demo panel
@@ -34,7 +34,7 @@ export const DemoModePanel = () => {
       return;
     }
 
-    // Allow demo mode to work even without a user ID
+    // Use the user ID if available, otherwise use a demo placeholder
     const userId = user?.id || "demo-user-id";
 
     setIsLoading(true);
@@ -45,23 +45,23 @@ export const DemoModePanel = () => {
         type: notificationType 
       });
       
-      // Make a direct POST request to the medication-alerts function with demoMode flag
-      const { data, error } = await supabase.functions.invoke('medication-alerts', {
-        method: 'POST',
-        body: { 
-          userId: userId,
-          medicationId: selectedMedication,
-          notificationType,
-          demoMode: true // Specify this is a demo request
-        }
+      // Send the notification with explicit parameters and demoMode flag
+      const response = await triggerNotification({
+        userId: userId,
+        medicationId: selectedMedication,
+        notificationType: notificationType,
+        customMessage: "This is a demo notification",
+        demoMode: true // Always set demoMode to true for demo panel
       });
 
-      if (error) throw error;
+      if (!response.success) {
+        throw new Error(response.error?.message || "Unknown error");
+      }
 
-      console.log("Demo notification response:", data);
+      console.log("Demo notification response:", response.data);
       
       if (notificationType === 'esp32' || notificationType === 'both') {
-        setEsp32Data(data?.notifications || []);
+        setEsp32Data(response.data?.notifications || []);
       }
 
       toast({
