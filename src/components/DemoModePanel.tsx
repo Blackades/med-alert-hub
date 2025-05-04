@@ -45,7 +45,7 @@ export const DemoModePanel = () => {
         type: notificationType 
       });
       
-      // Send the notification with explicit parameters and demoMode flag
+      // For the notification service
       const response = await triggerNotification({
         userId: userId,
         medicationId: selectedMedication,
@@ -60,6 +60,7 @@ export const DemoModePanel = () => {
 
       console.log("Demo notification response:", response.data);
       
+      // For ESP32 response data
       if (notificationType === 'esp32' || notificationType === 'both') {
         setEsp32Data(response.data?.notifications || []);
       }
@@ -128,6 +129,11 @@ export const DemoModePanel = () => {
                       {med.name} ({med.dosage})
                     </SelectItem>
                   ))}
+                  {medications.length === 0 && (
+                    <SelectItem value="demo-medication-id">
+                      Demo Medication (10mg)
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -150,7 +156,7 @@ export const DemoModePanel = () => {
             <div className="flex gap-2">
               <Button 
                 onClick={handleTriggerDemo} 
-                disabled={isLoading || !selectedMedication}
+                disabled={isLoading || (!selectedMedication && medications.length > 0)}
                 className="flex-1"
               >
                 {isLoading ? (

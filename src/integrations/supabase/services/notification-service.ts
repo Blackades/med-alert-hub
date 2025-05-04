@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { toast } from "@/hooks/use-toast";
 
@@ -52,8 +53,8 @@ export const triggerNotification = async (options: NotificationRequest) => {
       ...options,
       demoMode: options.demoMode === true
     };
-    
-    // Send notification directly using the send-notification endpoint
+
+    // First try direct send-notification endpoint (which works properly in demo mode)
     const response = await supabase.functions.invoke('send-notification', {
       body: requestOptions,
     });
