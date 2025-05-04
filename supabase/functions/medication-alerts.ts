@@ -75,10 +75,41 @@ serve(async (req) => {
     
     // Handle POST request to send alerts for a specific medication
     else if (method === "POST") {
-      const { userId, medicationId } = await req.json();
+      // Parse the request body
+      let body;
+      try {
+        body = await req.json();
+      } catch (e) {
+        console.error(`[${requestId}] Failed to parse request body: ${e.message}`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Invalid request body: Could not parse JSON"
+        }), {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
+      }
+      
+      const { userId, medicationId, notificationType } = body;
+      
+      // Log received parameters for debugging
+      console.log(`[${requestId}] Received parameters:`, { userId, medicationId, notificationType });
       
       if (!userId || !medicationId) {
-        throw new Error("Missing required fields: userId and medicationId");
+        console.error(`[${requestId}] Missing required fields: userId=${userId}, medicationId=${medicationId}`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Missing required fields: userId and medicationId"
+        }), {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
       }
       
       console.log(`[${requestId}] Sending medication alert for med ${medicationId} to user ${userId}`);
@@ -90,8 +121,32 @@ serve(async (req) => {
         .eq('id', userId)
         .maybeSingle();
       
-      if (userError || !user) {
-        throw new Error(`User with ID ${userId} not found`);
+      if (userError) {
+        console.error(`[${requestId}] Error fetching user: ${userError.message}`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Failed to fetch user: ${userError.message}`
+        }), {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
+      }
+      
+      if (!user) {
+        console.error(`[${requestId}] User with ID ${userId} not found`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: `User with ID ${userId} not found`
+        }), {
+          status: 404,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
       }
       
       // Fetch the medication
@@ -101,23 +156,59 @@ serve(async (req) => {
         .eq('id', medicationId)
         .maybeSingle();
       
-      if (medError || !medication) {
-        throw new Error(`Medication with ID ${medicationId} not found`);
+      if (medError) {
+        console.error(`[${requestId}] Error fetching medication: ${medError.message}`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Failed to fetch medication: ${medError.message}`
+        }), {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
+      }
+      
+      if (!medication) {
+        console.error(`[${requestId}] Medication with ID ${medicationId} not found`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Medication with ID ${medicationId} not found`
+        }), {
+          status: 404,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
       }
       
       // Check that medication belongs to the user
       if (medication.user_id !== userId) {
-        throw new Error("Medication does not belong to this user");
+        console.error(`[${requestId}] Medication does not belong to user: med.user_id=${medication.user_id}, userId=${userId}`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Medication does not belong to this user"
+        }), {
+          status: 403,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
       }
       
       // Call the send-notification function to deliver the alert
       const alertPayload = {
         userId,
         medicationId,
-        notificationType: user.notification_preferences?.default_type || 'email',
+        notificationType: notificationType || user.notification_preferences?.default_type || 'email',
         customMessage: `Time to take your ${medication.name} (${medication.dosage})`,
         priorityLevel: 'high',
       };
+      
+      console.log(`[${requestId}] Sending notification with payload:`, alertPayload);
       
       // Send notification
       const { data: notificationResult, error: notifyError } = await supabaseAdmin.functions.invoke(
@@ -127,7 +218,17 @@ serve(async (req) => {
       );
       
       if (notifyError) {
-        throw new Error(`Failed to send notification: ${notifyError.message}`);
+        console.error(`[${requestId}] Failed to send notification: ${notifyError.message}`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Failed to send notification: ${notifyError.message}`
+        }), {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
       }
       
       console.log(`[${requestId}] Alert sent successfully: ${JSON.stringify(notificationResult)}`);

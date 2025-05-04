@@ -50,13 +50,17 @@ export const DemoModePanel = () => {
         type: notificationType 
       });
       
-      const { success, data, error } = await triggerDemoNotification(
-        user.id,
-        selectedMedication,
-        notificationType
-      );
+      // Make a direct POST request to the medication-alerts function
+      const { data, error } = await supabase.functions.invoke('medication-alerts', {
+        method: 'POST',
+        body: { 
+          userId: user.id,
+          medicationId: selectedMedication,
+          notificationType
+        }
+      });
 
-      if (!success) throw error;
+      if (error) throw error;
 
       console.log("Demo notification response:", data);
       

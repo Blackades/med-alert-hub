@@ -92,14 +92,24 @@ export const triggerDemoNotification = async (
   try {
     console.log(`Triggering demo notification: userId=${userId}, medicationId=${medicationId}, type=${notificationType}`);
     
-    // Add a custom message to make it clear this is a demo
-    return await triggerNotification({
-      userId,
-      medicationId,
-      notificationType: notificationType as NotificationType,
-      customMessage: "This is a DEMO notification from MedTracker.",
-      priorityLevel: 'medium',
+    // Direct call to the medication-alerts function with required parameters
+    const { data, error } = await supabase.functions.invoke('medication-alerts', {
+      method: 'POST',
+      body: {
+        userId,
+        medicationId,
+        notificationType
+      }
     });
+
+    if (error) {
+      console.error('Medication alerts function error:', error);
+      throw new Error(error.message || 'Failed to trigger demo notification');
+    }
+    
+    console.log('Medication alerts response:', data);
+    
+    return { success: true, data };
   } catch (error) {
     console.error('Error triggering demo notification:', error);
     
