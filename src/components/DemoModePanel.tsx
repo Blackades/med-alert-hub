@@ -7,9 +7,7 @@ import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info, RefreshCw } from "lucide-react";
-import { triggerDemoNotification } from "@/integrations/supabase/services/notification-service";
-// Import processEmailQueue directly from the file where it's defined
-import { processEmailQueue } from "@/integrations/supabase/services/notification-service";
+import { triggerDemoNotification, processEmailQueue } from "@/integrations/supabase/services/notification-service";
 
 // Define compatible notification types for the demo panel
 type DemoPanelNotificationType = "email" | "esp32" | "both";
@@ -84,7 +82,6 @@ export const DemoModePanel = () => {
   const handleProcessEmailQueue = async () => {
     setIsProcessingEmails(true);
     try {
-      // Use the properly imported processEmailQueue function
       const { success, data, error, result } = await processEmailQueue();
       
       if (!success) throw error;
