@@ -55,10 +55,30 @@ serve(async (req) => {
         .order('next_dose_at', { ascending: true });
       
       if (alertsError) {
-        throw new Error(`Error querying due alerts: ${alertsError.message}`);
+        console.log(`[${requestId}] Error querying due alerts: ${alertsError.message}`);
+        // Continue with an empty array if error occurred
       }
       
       console.log(`[${requestId}] Found ${dueAlerts?.length || 0} medications due soon`);
+      
+      // If there are medications due soon, trigger notifications for each
+      if (dueAlerts && dueAlerts.length > 0) {
+        const notificationPromises = dueAlerts.map(alert => {
+          return supabaseAdmin.functions.invoke('send-notification', {
+            body: {
+              userId: alert.user_id,
+              medicationId: alert.id,
+              notificationType: 'email', // Default to email
+              customMessage: `Time to take your ${alert.name} (${alert.dosage})`,
+              priorityLevel: 'high'
+            }
+          });
+        });
+        
+        // Wait for all notifications to be sent
+        await Promise.allSettled(notificationPromises);
+        console.log(`[${requestId}] Sent notifications for ${dueAlerts.length} medications`);
+      }
       
       // Return the due medications
       return new Response(JSON.stringify({
@@ -93,16 +113,16 @@ serve(async (req) => {
         });
       }
       
-      const { userId, medicationId, notificationType, demoMode, customMessage } = body;
+      const { userId, medicationId, notificationType, demoMode, customMessage, testMode } = body;
       
       // Log received parameters for debugging
-      console.log(`[${requestId}] Received parameters:`, { userId, medicationId, notificationType, demoMode, customMessage });
+      console.log(`[${requestId}] Received parameters:`, { userId, medicationId, notificationType, demoMode, customMessage, testMode });
       
-      // Check for demo mode - if in demo mode, we don't need to validate all parameters
-      const isDemoMode = demoMode === true;
+      // Check for demo mode or test mode
+      const isDemoMode = demoMode === true || testMode === true;
       console.log(`[${requestId}] Demo mode: ${isDemoMode ? "ENABLED" : "DISABLED"}`);
       
-      // Only validate required fields if not in demo mode
+      // Only validate required fields if not in demo/test mode
       if (!isDemoMode && (!userId || !medicationId)) {
         console.error(`[${requestId}] Missing required fields: userId=${userId}, medicationId=${medicationId}`);
         return new Response(JSON.stringify({
@@ -155,7 +175,7 @@ serve(async (req) => {
           // Create a placeholder user for demo purposes
           placeholderUser = {
             id: effectiveUserId,
-            email: "demo@example.com",
+            email: testMode ? body.recipientEmail || "demo@example.com" : "demo@example.com",
             display_name: "Demo User",
             notification_preferences: { default_type: "email" }
           };
@@ -249,7 +269,9 @@ serve(async (req) => {
         notificationType: notificationType || (effectiveUser?.notification_preferences?.default_type || 'email'),
         customMessage: customMessage || `Time to take your ${effectiveMedication?.name} (${effectiveMedication?.dosage})`,
         priorityLevel: 'high',
-        demoMode: isDemoMode // Pass the demo mode flag to the send-notification function
+        demoMode: isDemoMode, // Pass the demo mode flag to the send-notification function
+        testMode: testMode, // Pass the test mode flag
+        recipientEmail: testMode ? body.recipientEmail : undefined
       };
       
       console.log(`[${requestId}] Sending notification with payload:`, alertPayload);

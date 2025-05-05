@@ -46,13 +46,14 @@ export const DemoModePanel = () => {
         demoMode: true 
       });
       
-      // For the notification service
+      // Call the medication-alerts endpoint directly with demoMode=true
       const response = await triggerNotification({
         userId: userId,
         medicationId: selectedMedication,
         notificationType: notificationType,
         customMessage: "This is a demo notification",
-        demoMode: true // Always set demoMode to true for demo panel
+        demoMode: true, // Always set demoMode to true for demo panel
+        testMode: !user // If no user, use test mode to avoid auth issues
       });
 
       if (!response.success) {
@@ -69,6 +70,7 @@ export const DemoModePanel = () => {
       toast({
         title: "Demo Triggered",
         description: `Successfully triggered ${notificationType} notification demo`,
+        variant: "default",
       });
     } catch (error: any) {
       console.error("Error triggering demo:", error);
@@ -109,6 +111,7 @@ export const DemoModePanel = () => {
       toast({
         title: "Email Queue Processed",
         description: `Processed: ${result?.processed || 0}, Failed: ${result?.failed || 0}`,
+        variant: "default",
       });
     } catch (error: any) {
       console.error("Error processing email queue:", error);

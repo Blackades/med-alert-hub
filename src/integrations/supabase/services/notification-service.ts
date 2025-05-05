@@ -54,26 +54,48 @@ export const triggerNotification = async (options: NotificationRequest) => {
       demoMode: options.demoMode === true
     };
 
-    // First try direct send-notification endpoint (which works properly in demo mode)
-    const response = await supabase.functions.invoke('send-notification', {
+    // First try sending directly to the medication-alerts function to ensure proper demo mode handling
+    const alertsResponse = await supabase.functions.invoke('medication-alerts', {
+      method: 'POST',
       body: requestOptions,
     });
 
-    if (response.error) {
-      console.error("Send notification endpoint error:", response.error);
-      throw new Error(response.error.message || 'Failed to trigger notification');
+    if (alertsResponse.error) {
+      console.error("Medication alerts error:", alertsResponse.error);
+      
+      // If medication-alerts fails, fall back to direct send-notification
+      const response = await supabase.functions.invoke('send-notification', {
+        body: requestOptions,
+      });
+      
+      if (response.error) {
+        console.error("Send notification endpoint error:", response.error);
+        throw new Error(response.error.message || 'Failed to trigger notification');
+      }
+      
+      console.log("Send notification endpoint response:", response.data);
+      
+      // Show a success toast
+      toast({
+        title: "Notification Sent",
+        description: response.data?.message || "Notification has been sent successfully.",
+        variant: "default",
+      });
+      
+      return { success: true, data: response.data as NotificationResponse };
     }
     
-    console.log("Send notification endpoint response:", response.data);
-
+    console.log("Medication alerts response:", alertsResponse.data);
+    
     // Show a success toast
     toast({
       title: "Notification Sent",
-      description: response.data?.message || "Notification has been sent successfully.",
+      description: alertsResponse.data?.message || "Medication alert has been sent successfully.",
       variant: "default",
     });
     
-    return { success: true, data: response.data as NotificationResponse };
+    return { success: true, data: alertsResponse.data };
+    
   } catch (error: any) {
     console.error('Error triggering notification:', error);
     

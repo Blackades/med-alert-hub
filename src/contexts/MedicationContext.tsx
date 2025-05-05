@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -27,11 +28,43 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const { user, session } = useAuth();
 
+  // Set up periodic medication check for automatic reminders
   useEffect(() => {
     if (session) {
       fetchMedications();
+      
+      // Set up automatic reminder check every minute
+      const reminderInterval = setInterval(() => {
+        checkAndSendReminders();
+      }, 60000); // Check every minute
+      
+      return () => {
+        clearInterval(reminderInterval);
+      };
     }
   }, [session]);
+
+  // Function to check medications and send reminders
+  const checkAndSendReminders = async () => {
+    try {
+      // Call the medication-alerts function to check for due medications
+      const { data, error } = await supabase.functions.invoke('medication-alerts', {
+        method: 'GET'
+      });
+      
+      if (error) {
+        console.error("Error checking medication alerts:", error);
+        return;
+      }
+      
+      if (data?.count > 0) {
+        console.log(`Found ${data.count} medications due soon`);
+        // Notifications will be handled by the backend
+      }
+    } catch (err) {
+      console.error("Error in automatic medication check:", err);
+    }
+  };
 
   const fetchMedications = async () => {
     try {
@@ -157,29 +190,25 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
       const medication = medications.find(med => med.id === id);
       if (!medication) return;
 
-      const { error: scheduleError } = await supabase
-        .from('medication_schedules')
-        .update({ taken: true })
-        .eq('medication_id', id);
-
-      if (scheduleError) throw scheduleError;
-
-      // Invoke the enhanced schedule-next-dose function
-      const { data, error } = await supabase.functions.invoke('schedule-next-dose', {
+      // Call the medication-status service to handle the backend updates
+      const { data, error } = await supabase.functions.invoke('handle-medication-status', {
         body: {
+          action: 'take',
           medicationId: id,
-          currentDose: new Date().toISOString(),
+          takenAt: new Date().toISOString(),
         },
       });
 
       if (error) throw error;
-      console.log("Schedule next dose response:", data);
+      console.log("Medication taken response:", data);
 
+      // Refresh the medications list to show updated state
       await fetchMedications();
 
       toast({
         title: "Medication taken",
         description: "Great job keeping up with your medication schedule!",
+        variant: "default",
       });
     } catch (error: any) {
       console.error("Error taking medication:", error);
@@ -193,41 +222,25 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
 
   const skipMedication = async (id: string) => {
     try {
-      // Call the schedule-next-dose function with skipNextDose flag
-      const { error } = await supabase.functions.invoke('schedule-next-dose', {
+      // Call the medication-status service instead of directly updating
+      const { data, error } = await supabase.functions.invoke('handle-medication-status', {
         body: {
+          action: 'skip',
           medicationId: id,
-          currentDose: new Date().toISOString(),
-          skipNextDose: true
+          reason: "Skipped by user"
         },
       });
 
       if (error) throw error;
+      console.log("Medication skipped response:", data);
 
-      // Update local state
-      const { error: scheduleError } = await supabase
-        .from('medication_schedules')
-        .update({ taken: true })
-        .eq('medication_id', id);
-
-      if (scheduleError) throw scheduleError;
-
-      // Log the skipped medication
-      await supabase
-        .from('medication_logs')
-        .insert({
-          medication_id: id,
-          scheduled_time: new Date().toISOString(),
-          status: 'skipped',
-          user_id: user?.id,
-        });
-
+      // Refresh the medications list to show updated state
       await fetchMedications();
 
       toast({
         title: "Medication skipped",
-        description: "The medication has been marked as skipped.",
-        variant: "destructive",
+        description: "The medication has been marked as skipped and scheduled for next time.",
+        variant: "default",
       });
     } catch (error: any) {
       toast({
