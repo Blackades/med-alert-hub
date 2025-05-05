@@ -52,13 +52,27 @@ serve(async (req) => {
     }
     const resend = new Resend(resendApiKey);
     
-    // Get pending emails from queue
-    const { data: pendingEmails, error: queueError } = await supabase
+    // Check for the prioritize parameter from the request body
+    let prioritizeDemoEmails = false;
+    try {
+      const body = await req.json();
+      prioritizeDemoEmails = body.prioritizeDemoEmails === true;
+    } catch {
+      // If there's an error parsing JSON, just continue with default behavior
+    }
+    
+    // Get pending emails from queue with improved query
+    const baseQuery = supabase
       .from('email_queue')
       .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
-      .limit(10); // Process in batches
+      .eq('status', 'pending');
+    
+    // If prioritizing demo emails, order by demo flag and created_at
+    const query = prioritizeDemoEmails 
+      ? baseQuery.order('demo_mode', { ascending: false }).order('created_at', { ascending: true })
+      : baseQuery.order('created_at', { ascending: true });
+    
+    const { data: pendingEmails, error: queueError } = await query.limit(10);
     
     if (queueError) {
       throw new Error(`Failed to fetch pending emails: ${queueError.message}`);
@@ -86,7 +100,7 @@ serve(async (req) => {
     // Process each email
     for (const email of pendingEmails) {
       try {
-        console.log(`[${requestId}] Processing email ID ${email.id} to ${email.email}`);
+        console.log(`[${requestId}] Processing email ID ${email.id} to ${email.email}${email.demo_mode ? " (DEMO MODE)" : ""}`);
         
         // Get app name from environment or use default
         const appName = Deno.env.get("APP_NAME") || "MedTracker";
@@ -108,7 +122,7 @@ serve(async (req) => {
           .update({
             status: 'sent',
             sent_at: new Date().toISOString(),
-            result: result
+            result_data: result
           })
           .eq('id', email.id);
         

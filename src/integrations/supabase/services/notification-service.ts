@@ -21,6 +21,7 @@ export interface NotificationRequest {
   subject?: string;
   message?: string;
   testMode?: boolean;
+  autoProcessEmails?: boolean; // New flag to auto-process emails
 }
 
 // Response interface
@@ -82,6 +83,11 @@ export const triggerNotification = async (options: NotificationRequest) => {
         variant: "default",
       });
       
+      // Auto-process emails if flag is set
+      if (options.autoProcessEmails) {
+        await processEmailQueue();
+      }
+      
       return { success: true, data: response.data as NotificationResponse };
     }
     
@@ -93,6 +99,11 @@ export const triggerNotification = async (options: NotificationRequest) => {
       description: alertsResponse.data?.message || "Medication alert has been sent successfully.",
       variant: "default",
     });
+    
+    // Auto-process emails if flag is set
+    if (options.autoProcessEmails) {
+      await processEmailQueue();
+    }
     
     return { success: true, data: alertsResponse.data };
     
@@ -127,6 +138,7 @@ export const triggerDemoNotification = async (
       medicationId,
       notificationType,
       demoMode: true,
+      autoProcessEmails: true, // Always auto-process emails for demo
       customMessage: "This is a demo notification"
     });
   } catch (error: any) {
@@ -179,6 +191,7 @@ export const scheduleNotification = async (options: NotificationRequest & { sche
  */
 export const processEmailQueue = async () => {
   try {
+    console.log("Processing email queue...");
     const response = await supabase.functions.invoke('process-email-queue', {
       method: 'POST',
     });
@@ -189,6 +202,8 @@ export const processEmailQueue = async () => {
     }
     
     console.log("Process email queue response:", response.data);
+    
+    // Don't show a toast here as it will be called automatically after demo notification
     
     return { 
       success: true, 

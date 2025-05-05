@@ -43,7 +43,8 @@ export const DemoModePanel = () => {
         user: userId, 
         medication: selectedMedication, 
         type: notificationType,
-        demoMode: true 
+        demoMode: true,
+        autoProcessEmails: true // Auto-process emails after notification
       });
       
       // Call the medication-alerts endpoint directly with demoMode=true
@@ -53,7 +54,8 @@ export const DemoModePanel = () => {
         notificationType: notificationType,
         customMessage: "This is a demo notification",
         demoMode: true, // Always set demoMode to true for demo panel
-        testMode: !user // If no user, use test mode to avoid auth issues
+        testMode: !user, // If no user, use test mode to avoid auth issues
+        autoProcessEmails: true // Auto-process emails immediately
       });
 
       if (!response.success) {
