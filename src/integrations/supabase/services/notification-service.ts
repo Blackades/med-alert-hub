@@ -187,7 +187,7 @@ export const processEmailQueue = async () => {
 };
 
 /**
- * Function to make the demo panel functionality explicit
+ * Function to fetch ESP32 notification data
  */
 export const getESP32NotificationData = async () => {
   try {

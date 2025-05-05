@@ -83,20 +83,6 @@ const sendEmailDirectly = async (to, subject, html, requestId) => {
   }
 };
 
-// Safe database operation wrapper with better error handling
-const safeDbOperation = async (operation, fallback = null, requestId) => {
-  try {
-    const result = await operation();
-    return result;
-  } catch (error) {
-    console.error(`[${requestId}] Database operation failed:`, error.message);
-    return {
-      data: fallback,
-      error
-    };
-  }
-};
-
 // Main request handler with improved error handling
 serve(async (req) => {
   const requestId = generateRequestId();
@@ -147,6 +133,10 @@ serve(async (req) => {
         }
       });
     }
+    
+    // Check for demo mode
+    const isDemoMode = requestData.demoMode === true;
+    console.log(`[${requestId}] Demo mode: ${isDemoMode ? "ENABLED" : "DISABLED"}`);
     
     // Create client with error handling
     let supabase;
@@ -207,14 +197,18 @@ serve(async (req) => {
     }
     
     // Process the notification request
-    const { userId, medicationId, notificationType, customMessage, priorityLevel, scheduleTime, demoMode } = requestData;
+    const { userId, medicationId, notificationType, customMessage, priorityLevel, scheduleTime } = requestData;
+    
+    // Make the userId and medicationId optional in demo mode
+    const effectiveUserId = userId || (isDemoMode ? 'demo-user-id' : null);
+    const effectiveMedicationId = medicationId || (isDemoMode ? 'demo-medication-id' : null);
     
     // Validate required parameters for normal notification
-    if (!userId || !medicationId || !notificationType) {
-      console.error(`[${requestId}] Missing required parameters:`, { userId, medicationId, notificationType });
+    if (!isDemoMode && (!effectiveUserId || !effectiveMedicationId || !notificationType)) {
+      console.error(`[${requestId}] Missing required parameters in non-demo mode:`, { effectiveUserId, effectiveMedicationId, notificationType });
       return new Response(JSON.stringify({
         success: false,
-        message: "Missing required parameters. userId, medicationId, and notificationType are required.",
+        message: "Missing required parameters. userId, medicationId, and notificationType are required in non-demo mode.",
         requestId
       }), {
         status: 400,
@@ -225,57 +219,60 @@ serve(async (req) => {
       });
     }
     
-    console.log(`[${requestId}] Processing ${notificationType} notification for user ${userId}${demoMode ? " (DEMO MODE)" : ""}`);
+    // In demo mode, we can proceed with placeholder values
+    if (isDemoMode && (!effectiveUserId || !effectiveMedicationId || !notificationType)) {
+      console.log(`[${requestId}] Using placeholder values in demo mode for missing parameters`);
+    }
+    
+    const effectiveNotificationType = notificationType || 'email';
+    
+    console.log(`[${requestId}] Processing ${effectiveNotificationType} notification for user ${effectiveUserId}${isDemoMode ? " (DEMO MODE)" : ""}`);
     
     // If in demo mode and we have a specific demo recipient email
     let userData = null;
     let fakeUser = false;
     
     // Retrieve user data for notification with robust error handling
-    if (!demoMode) {
-      // Use .maybeSingle() instead of .single() to handle empty results gracefully
-      const userResult = await safeDbOperation(async () => {
-        const { data, error } = await supabase.from("profiles").select("email, phone_number").eq("id", userId).maybeSingle();
+    if (!isDemoMode) {
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("email, phone_number")
+          .eq("id", effectiveUserId)
+          .maybeSingle();
+          
         if (error) throw error;
-        // Use a more graceful handling of missing users
-        return {
-          data: data || null,
-          error: null
-        };
-      }, null, requestId);
-      
-      if (userResult.error) {
-        console.error(`[${requestId}] User data fetch error:`, userResult.error);
+        
+        if (!data) {
+          console.error(`[${requestId}] User with ID ${effectiveUserId} not found`);
+          return new Response(JSON.stringify({
+            success: false,
+            message: `User with ID ${effectiveUserId} not found`,
+            requestId
+          }), {
+            status: 404,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json"
+            }
+          });
+        }
+        
+        userData = data;
+      } catch (error) {
+        console.error(`[${requestId}] User data fetch error:`, error.message);
         return new Response(JSON.stringify({
           success: false,
-          message: `Failed to fetch user data: ${userResult.error.message || "Database error"}`,
+          message: `Failed to fetch user data: ${error.message || "Database error"}`,
           requestId
         }), {
-          status: 404,
+          status: 500,
           headers: {
             ...corsHeaders,
             "Content-Type": "application/json"
           }
         });
       }
-      
-      // Add specific handling for missing users
-      if (!userResult.data) {
-        console.error(`[${requestId}] User with ID ${userId} not found`);
-        return new Response(JSON.stringify({
-          success: false,
-          message: `User with ID ${userId} not found`,
-          requestId
-        }), {
-          status: 404,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          }
-        });
-      }
-      
-      userData = userResult.data;
     } else {
       // Create fake user data for demo mode
       console.log(`[${requestId}] Using demo mode with placeholder user data`);
@@ -289,53 +286,77 @@ serve(async (req) => {
     console.log(`[${requestId}] Found user data:`, userData);
     
     // Get medication details with proper error handling
-    // Use .maybeSingle() instead of .single() to handle empty results gracefully
-    const medResult = await safeDbOperation(async () => {
-      const { data, error } = await supabase.from("medications").select("name, dosage, instructions").eq("id", medicationId).maybeSingle();
-      if (error) throw error;
-      // Just return the data, even if null
-      return {
-        data: data || null,
-        error: null
-      };
-    }, null, requestId);
+    let medication = null;
     
-    if (medResult.error) {
-      console.error(`[${requestId}] Medication data fetch error:`, medResult.error);
-      return new Response(JSON.stringify({
-        success: false,
-        message: `Failed to fetch medication data: ${medResult.error.message || "Database error"}`,
-        requestId
-      }), {
-        status: 404,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
+    try {
+      if (!isDemoMode) {
+        const { data, error } = await supabase
+          .from("medications")
+          .select("name, dosage, instructions")
+          .eq("id", effectiveMedicationId)
+          .maybeSingle();
+          
+        if (error) throw error;
+        
+        if (!data) {
+          console.error(`[${requestId}] Medication with ID ${effectiveMedicationId} not found`);
+          
+          // In non-demo mode, medication must exist
+          return new Response(JSON.stringify({
+            success: false,
+            message: `Medication with ID ${effectiveMedicationId} not found`,
+            requestId
+          }), {
+            status: 404,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json"
+            }
+          });
         }
-      });
+        
+        medication = data;
+      } else {
+        // Create placeholder medication for demo mode
+        medication = {
+          name: "Demo Medication",
+          dosage: "10mg",
+          instructions: "Take with water as directed"
+        };
+      }
+    } catch (error) {
+      console.error(`[${requestId}] Medication data fetch error:`, error.message);
+      
+      if (!isDemoMode) {
+        return new Response(JSON.stringify({
+          success: false,
+          message: `Failed to fetch medication data: ${error.message || "Database error"}`,
+          requestId
+        }), {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
+      } else {
+        // In demo mode, we can proceed with a placeholder medication
+        medication = {
+          name: "Demo Medication",
+          dosage: "10mg",
+          instructions: "Take with water as directed"
+        };
+      }
     }
     
-    // Add specific handling for missing medications
-    if (!medResult.data) {
-      console.error(`[${requestId}] Medication with ID ${medicationId} not found`);
-      console.log(`[${requestId}] Will continue with generic medication information`);
-      // Instead of returning an error, we'll continue with a generic medication
-      medResult.data = {
-        name: "your medication",
-        dosage: "as prescribed",
-        instructions: "as directed by your healthcare provider"
-      };
-    }
-    
-    const medication = medResult.data;
     console.log(`[${requestId}] Medication data:`, medication);
     
     // Log the notification request in a try-catch block to prevent failure
     try {
       await supabase.from("notification_logs").insert({
-        user_id: userId,
-        medication_id: medicationId,
-        notification_type: notificationType,
+        user_id: effectiveUserId,
+        medication_id: effectiveMedicationId,
+        notification_type: effectiveNotificationType,
         priority_level: priorityLevel || "medium",
         scheduled_time: scheduleTime || new Date().toISOString(),
         content: {
@@ -346,7 +367,8 @@ serve(async (req) => {
           }
         },
         request_id: requestId,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        demo_mode: isDemoMode
       });
     } catch (logError) {
       // Non-critical error, just log it
@@ -357,7 +379,7 @@ serve(async (req) => {
     const notifications = [];
     
     // Handle email notification if requested and user has email
-    if (['email', 'both', 'all'].includes(notificationType)) {
+    if (['email', 'both', 'all'].includes(effectiveNotificationType)) {
       if (userData?.email) {
         console.log(`[${requestId}] Processing email notification to ${userData.email}`);
         
@@ -365,7 +387,7 @@ serve(async (req) => {
         const emailSubject = `Medication Reminder: ${medication?.name || "Time to take your medication"}`;
         const emailContent = formatEmailContent(medication, customMessage);
         
-        if (demoMode) {
+        if (isDemoMode) {
           // In demo mode, don't actually send the email but simulate success
           console.log(`[${requestId}] DEMO MODE: Would send email to ${userData.email}`);
           console.log(`[${requestId}] DEMO MODE: Email content would be: ${emailContent.substring(0, 100)}...`);
@@ -425,25 +447,37 @@ serve(async (req) => {
       }
     }
     
-    // Handle ESP32 notification (placeholder)
-    if (['esp32', 'both', 'all'].includes(notificationType)) {
-      // This is just a placeholder that will be implemented in the future
+    // Handle ESP32 notification
+    if (['esp32', 'both', 'all'].includes(effectiveNotificationType)) {
+      // This is a placeholder for ESP32 notification processing
+      // In a real application, this would interact with the ESP32 notification system
+      console.log(`[${requestId}] Processing ESP32 notification for user ${effectiveUserId}`);
+      
+      // Simulating a successful ESP32 notification
       notifications.push({
         success: true,
         channel: "esp32",
         timestamp: new Date().toISOString(),
-        message: demoMode ? "DEMO: ESP32 notification simulated" : "ESP32 notification processed"
+        message: isDemoMode ? "DEMO: ESP32 notification simulated" : "ESP32 notification processed",
+        data: {
+          userId: effectiveUserId,
+          medicationId: effectiveMedicationId,
+          medicationName: medication?.name || "Demo Medication",
+          dosage: medication?.dosage || "10mg",
+          timestamp: new Date().toISOString(),
+          demoMode: isDemoMode
+        }
       });
     }
     
     // Return success response with all notification results
     return new Response(JSON.stringify({
       success: true,
-      message: demoMode ? "Demo notification processing completed" : "Notification processing completed",
+      message: isDemoMode ? "Demo notification processing completed" : "Notification processing completed",
       notifications,
       timestamp: new Date().toISOString(),
       requestId,
-      demoMode: demoMode || false
+      demoMode: isDemoMode || false
     }), {
       status: 200,
       headers: {

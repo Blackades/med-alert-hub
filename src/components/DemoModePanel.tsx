@@ -8,8 +8,7 @@ import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info, RefreshCw } from "lucide-react";
-import { triggerNotification, processEmailQueue } from "@/integrations/supabase/services/notification-service";
-import { supabase } from "@/integrations/supabase/client";
+import { triggerNotification, processEmailQueue, getESP32NotificationData } from "@/integrations/supabase/services/notification-service";
 
 // Define compatible notification types for the demo panel
 type DemoPanelNotificationType = "email" | "esp32" | "both";
@@ -23,6 +22,7 @@ export const DemoModePanel = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingEmails, setIsProcessingEmails] = useState(false);
   const [esp32Data, setEsp32Data] = useState<any>(null);
+  const [isLoadingEsp32Data, setIsLoadingEsp32Data] = useState(false);
 
   const handleTriggerDemo = async () => {
     if (!selectedMedication) {
@@ -42,7 +42,8 @@ export const DemoModePanel = () => {
       console.log("Triggering demo with:", { 
         user: userId, 
         medication: selectedMedication, 
-        type: notificationType 
+        type: notificationType,
+        demoMode: true 
       });
       
       // For the notification service
@@ -60,9 +61,9 @@ export const DemoModePanel = () => {
 
       console.log("Demo notification response:", response.data);
       
-      // For ESP32 response data
+      // For ESP32 notification data, fetch it after triggering
       if (notificationType === 'esp32' || notificationType === 'both') {
-        setEsp32Data(response.data?.notifications || []);
+        await fetchESP32Data();
       }
 
       toast({
@@ -78,6 +79,23 @@ export const DemoModePanel = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchESP32Data = async () => {
+    setIsLoadingEsp32Data(true);
+    try {
+      const { success, data } = await getESP32NotificationData();
+      if (success && data) {
+        setEsp32Data(data);
+      } else {
+        setEsp32Data([]);
+      }
+    } catch (error) {
+      console.error("Error fetching ESP32 data:", error);
+      setEsp32Data([]);
+    } finally {
+      setIsLoadingEsp32Data(false);
     }
   };
   
@@ -156,7 +174,7 @@ export const DemoModePanel = () => {
             <div className="flex gap-2">
               <Button 
                 onClick={handleTriggerDemo} 
-                disabled={isLoading || (!selectedMedication && medications.length > 0)}
+                disabled={isLoading}
                 className="flex-1"
               >
                 {isLoading ? (
@@ -188,6 +206,12 @@ export const DemoModePanel = () => {
               </Button>
             </div>
           </div>
+
+          {isLoadingEsp32Data && (
+            <div className="flex justify-center items-center p-4">
+              <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
+            </div>
+          )}
 
           {esp32Data && esp32Data.length > 0 && (
             <div className="mt-4 border rounded-md p-4 bg-white">
