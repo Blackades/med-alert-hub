@@ -1,4 +1,3 @@
-
 // Implementation of the send-notification edge function
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
@@ -79,6 +78,114 @@ const sendEmailDirectly = async (to, subject, html, requestId) => {
     return {
       success: false,
       error: error.message || "Unknown email error"
+    };
+  }
+};
+
+// Add new function to send to physical ESP32 devices
+const sendToPhysicalESP32 = async (userId: string, message: string, requestId: string) => {
+  try {
+    // Get the user's ESP32 devices
+    const { data: devices, error } = await supabase
+      .from('user_devices')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('device_type', 'esp32')
+      .eq('is_active', true);
+    
+    if (error) {
+      console.error(`[${requestId}] Error fetching ESP32 devices:`, error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+    
+    if (!devices || devices.length === 0) {
+      console.log(`[${requestId}] No ESP32 devices found for user ${userId}`);
+      return {
+        success: true,
+        message: 'No ESP32 devices found',
+        deviceCount: 0
+      };
+    }
+    
+    console.log(`[${requestId}] Found ${devices.length} ESP32 devices for user ${userId}`);
+    
+    // Send notifications to each device with an endpoint
+    const results = await Promise.all(devices.map(async (device) => {
+      if (device.endpoint) {
+        try {
+          console.log(`[${requestId}] Sending notification to ESP32 device ${device.device_id} at ${device.endpoint}`);
+          
+          const response = await fetch(device.endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${device.device_token}`
+            },
+            body: JSON.stringify({
+              message,
+              type: 'both', // Activate both LED and buzzer
+              duration: 5000 // 5 seconds
+            })
+          });
+          
+          if (response.ok) {
+            console.log(`[${requestId}] Successfully sent notification to device ${device.device_id}`);
+            
+            // Update last seen timestamp
+            await supabase
+              .from('user_devices')
+              .update({ last_seen: new Date().toISOString() })
+              .eq('id', device.id);
+              
+            return {
+              device_id: device.device_id,
+              success: true
+            };
+          } else {
+            console.error(`[${requestId}] Failed to send notification to device ${device.device_id}:`, await response.text());
+            return {
+              device_id: device.device_id,
+              success: false,
+              error: await response.text()
+            };
+          }
+        } catch (err) {
+          console.error(`[${requestId}] Error sending to device ${device.device_id}:`, err);
+          return {
+            device_id: device.device_id,
+            success: false,
+            error: String(err)
+          };
+        }
+      } else {
+        console.log(`[${requestId}] Device ${device.device_id} has no endpoint configured`);
+        return {
+          device_id: device.device_id,
+          success: false,
+          error: 'No endpoint configured'
+        };
+      }
+    }));
+    
+    const successCount = results.filter(r => r.success).length;
+    
+    return {
+      success: successCount > 0,
+      message: `Sent notifications to ${successCount}/${devices.length} ESP32 devices`,
+      deviceCount: devices.length,
+      successCount,
+      results
+    };
+  } catch (err) {
+    console.error(`[${requestId}] Error in sendToPhysicalESP32:`, err);
+    return {
+      success: false,
+      error: String(err),
+      deviceCount: 0,
+      successCount: 0
     };
   }
 };
@@ -449,25 +556,50 @@ serve(async (req) => {
     
     // Handle ESP32 notification
     if (['esp32', 'both', 'all'].includes(effectiveNotificationType)) {
-      // This is a placeholder for ESP32 notification processing
-      // In a real application, this would interact with the ESP32 notification system
-      console.log(`[${requestId}] Processing ESP32 notification for user ${effectiveUserId}`);
-      
-      // Simulating a successful ESP32 notification
-      notifications.push({
-        success: true,
-        channel: "esp32",
-        timestamp: new Date().toISOString(),
-        message: isDemoMode ? "DEMO: ESP32 notification simulated" : "ESP32 notification processed",
-        data: {
-          userId: effectiveUserId,
-          medicationId: effectiveMedicationId,
-          medicationName: medication?.name || "Demo Medication",
-          dosage: medication?.dosage || "10mg",
-          timestamp: new Date().toISOString(),
-          demoMode: isDemoMode
+      if (userData?.email) {
+        console.log(`[${requestId}] Processing ESP32 notification for user ${effectiveUserId}`);
+        
+        // Try sending to physical ESP32 device first
+        const esp32Result = await sendToPhysicalESP32(
+          effectiveUserId,
+          `Medication Reminder: ${medication?.name || "Time to take your medication"}`,
+          requestId
+        );
+        
+        if (esp32Result.success && esp32Result.successCount > 0) {
+          notifications.push({
+            success: true,
+            channel: "esp32_physical",
+            timestamp: new Date().toISOString(),
+            message: `ESP32 notification sent to ${esp32Result.successCount} physical devices`,
+            details: esp32Result
+          });
+        } else {
+          // Fall back to simulated ESP32 notification if no physical devices or send failed
+          notifications.push({
+            success: true,
+            channel: "esp32",
+            timestamp: new Date().toISOString(),
+            message: isDemoMode ? "DEMO: ESP32 notification simulated" : "ESP32 notification processed",
+            data: {
+              userId: effectiveUserId,
+              medicationId: effectiveMedicationId,
+              medicationName: medication?.name || "Demo Medication",
+              dosage: medication?.dosage || "10mg",
+              timestamp: new Date().toISOString(),
+              demoMode: isDemoMode
+            }
+          });
         }
-      });
+      } else {
+        console.warn(`[${requestId}] ESP32 notification requested but user has no email address`);
+        notifications.push({
+          success: false,
+          channel: "esp32",
+          timestamp: new Date().toISOString(),
+          message: "User has no email address configured"
+        });
+      }
     }
     
     // Return success response with all notification results

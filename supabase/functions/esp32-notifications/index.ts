@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 
@@ -72,6 +73,63 @@ function determineMedicationStatus(nextDoseTime: string): MedicationStatus {
   }
 }
 
+// Send notification to physical ESP32 device
+async function sendToPhysicalESP32(userId: string, message: string): Promise<boolean> {
+  try {
+    // Get user's ESP32 devices
+    const { data: devices, error } = await supabase
+      .from('user_devices')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('device_type', 'esp32')
+      .eq('is_active', true);
+    
+    if (error || !devices || devices.length === 0) {
+      console.log(`No active ESP32 devices found for user: ${userId}`);
+      return false;
+    }
+
+    // Send notification to each active device
+    for (const device of devices) {
+      if (device.endpoint) {
+        try {
+          const response = await fetch(device.endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${device.device_token}`
+            },
+            body: JSON.stringify({
+              message,
+              type: 'both', // Activate both LED and buzzer
+              duration: 5000 // 5 seconds
+            })
+          });
+
+          if (response.ok) {
+            // Update last seen timestamp for the device
+            await supabase
+              .from('user_devices')
+              .update({ last_seen: new Date().toISOString() })
+              .eq('id', device.id);
+            
+            console.log(`Notification sent successfully to device: ${device.device_id}`);
+            return true;
+          } else {
+            console.error(`Failed to send notification to device: ${device.device_id}`, await response.text());
+          }
+        } catch (err) {
+          console.error(`Error sending notification to ESP32 device: ${device.device_id}`, err);
+        }
+      }
+    }
+    return false;
+  } catch (err) {
+    console.error(`Error in sendToPhysicalESP32: ${err}`);
+    return false;
+  }
+}
+
 // Handle different HTTP methods
 async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
@@ -82,6 +140,8 @@ async function handleRequest(req: Request): Promise<Response> {
     return await handleNotifications(req);
   } else if (path.endsWith('/mark-taken')) {
     return await handleMarkTaken(req);
+  } else if (path.endsWith('/send')) {
+    return await handleSendNotification(req);
   } else {
     return new Response(JSON.stringify({ 
       status: 'error', 
@@ -89,6 +149,147 @@ async function handleRequest(req: Request): Promise<Response> {
     }), {
       headers: RESPONSE_HEADERS,
       status: 404,
+    });
+  }
+}
+
+// New handler for direct notifications to ESP32
+async function handleSendNotification(req: Request): Promise<Response> {
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({
+      status: 'error',
+      message: 'Method not allowed'
+    }), {
+      headers: RESPONSE_HEADERS,
+      status: 405
+    });
+  }
+
+  try {
+    const requestData = await req.json();
+    const { userId, deviceId, message, type } = requestData;
+
+    if (!userId && !deviceId) {
+      return new Response(JSON.stringify({
+        status: 'error',
+        message: 'Either userId or deviceId is required'
+      }), {
+        headers: RESPONSE_HEADERS,
+        status: 400
+      });
+    }
+
+    if (!message) {
+      return new Response(JSON.stringify({
+        status: 'error',
+        message: 'Message is required'
+      }), {
+        headers: RESPONSE_HEADERS,
+        status: 400
+      });
+    }
+
+    let devices = [];
+    let result = false;
+
+    // If deviceId is provided, send to specific device
+    if (deviceId) {
+      const { data, error } = await supabase
+        .from('user_devices')
+        .select('*')
+        .eq('device_id', deviceId)
+        .eq('device_type', 'esp32')
+        .eq('is_active', true);
+
+      if (error || !data || data.length === 0) {
+        return new Response(JSON.stringify({
+          status: 'error',
+          message: 'Device not found or inactive'
+        }), {
+          headers: RESPONSE_HEADERS,
+          status: 404
+        });
+      }
+
+      devices = data;
+    } 
+    // If userId is provided, send to all user's devices
+    else if (userId) {
+      const { data, error } = await supabase
+        .from('user_devices')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('device_type', 'esp32')
+        .eq('is_active', true);
+
+      if (error || !data || data.length === 0) {
+        return new Response(JSON.stringify({
+          status: 'error',
+          message: 'No active devices found for user'
+        }), {
+          headers: RESPONSE_HEADERS,
+          status: 404
+        });
+      }
+
+      devices = data;
+    }
+
+    // Send notifications to all devices
+    const results = await Promise.all(devices.map(async (device) => {
+      if (device.endpoint) {
+        try {
+          const response = await fetch(device.endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${device.device_token}`
+            },
+            body: JSON.stringify({
+              message,
+              type: type || 'both', // Default to both LED and buzzer
+              duration: 5000 // 5 seconds
+            })
+          });
+
+          if (response.ok) {
+            // Update last seen timestamp for the device
+            await supabase
+              .from('user_devices')
+              .update({ last_seen: new Date().toISOString() })
+              .eq('id', device.id);
+            
+            return { device_id: device.device_id, success: true };
+          } else {
+            return { device_id: device.device_id, success: false, error: await response.text() };
+          }
+        } catch (err) {
+          return { device_id: device.device_id, success: false, error: String(err) };
+        }
+      } else {
+        return { device_id: device.device_id, success: false, error: 'No endpoint configured' };
+      }
+    }));
+
+    const successCount = results.filter(r => r.success).length;
+    result = successCount > 0;
+
+    return new Response(JSON.stringify({
+      status: result ? 'success' : 'error',
+      message: `Sent notifications to ${successCount}/${devices.length} devices`,
+      results
+    }), {
+      headers: RESPONSE_HEADERS,
+      status: result ? 200 : 500
+    });
+  } catch (error) {
+    console.error("Error sending ESP32 notification:", error);
+    return new Response(JSON.stringify({
+      status: 'error',
+      message: error instanceof Error ? error.message : String(error)
+    }), {
+      headers: RESPONSE_HEADERS,
+      status: 500
     });
   }
 }
@@ -135,6 +336,7 @@ async function handleNotifications(req: Request): Promise<Response> {
     // Process and prepare notifications
     const processedNotifications = [];
     const updatePromises = [];
+    const esp32Promises = [];
     
     if (alertMeds && alertMeds.length > 0) {
       for (const med of alertMeds) {
@@ -183,12 +385,25 @@ async function handleNotifications(req: Request): Promise<Response> {
               })
               .eq('id', med.id)
           );
+          
+          // Also send to physical ESP32 device if available
+          esp32Promises.push(
+            sendToPhysicalESP32(
+              med.medications.user_id, 
+              alertMessage
+            )
+          );
         }
       }
       
       // Execute all database updates in parallel
       if (updatePromises.length > 0) {
         await Promise.all(updatePromises);
+      }
+      
+      // Execute all ESP32 notifications in parallel
+      if (esp32Promises.length > 0) {
+        await Promise.all(esp32Promises);
       }
     }
     

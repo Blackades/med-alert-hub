@@ -1,6 +1,6 @@
-
 import { supabase } from '../client';
 import { toast } from "@/hooks/use-toast";
+import { sendEsp32Notification } from './notifications';
 
 // Types that match backend schema
 export type NotificationType = 'email' | 'sms' | 'esp32' | 'both' | 'all';
@@ -88,6 +88,14 @@ export const triggerNotification = async (options: NotificationRequest) => {
         await processEmailQueue();
       }
       
+      // Handle ESP32 physical device notification
+      if (['esp32', 'both', 'all'].includes(options.notificationType || '')) {
+        const message = options.customMessage || `Medication reminder: ${options.medicationId ? 'Time to take your medication' : 'Demo notification'}`;
+        if (options.userId) {
+          await sendEsp32Notification(options.userId, message, 'both');
+        }
+      }
+      
       return { success: true, data: response.data as NotificationResponse };
     }
     
@@ -103,6 +111,14 @@ export const triggerNotification = async (options: NotificationRequest) => {
     // Auto-process emails if flag is set
     if (options.autoProcessEmails) {
       await processEmailQueue();
+    }
+    
+    // Handle ESP32 physical device notification
+    if (['esp32', 'both', 'all'].includes(options.notificationType || '')) {
+      const message = options.customMessage || `Medication reminder: ${options.medicationId ? 'Time to take your medication' : 'Demo notification'}`;
+      if (options.userId) {
+        await sendEsp32Notification(options.userId, message, 'both');
+      }
     }
     
     return { success: true, data: alertsResponse.data };
