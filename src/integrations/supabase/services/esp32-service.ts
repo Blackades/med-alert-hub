@@ -30,6 +30,8 @@ export const getUserESP32Devices = async (userId: string) => {
     if (error) throw error;
     
     console.log(`Found ${data?.length || 0} ESP32 devices for user ${userId}`);
+    console.log("Device details:", data);
+    
     return { success: true, devices: data as ESP32Device[] };
   } catch (error) {
     console.error('Error getting ESP32 devices:', error);
@@ -127,15 +129,28 @@ export const sendNotificationToESP32 = async (deviceId: string, message: string,
       })
     });
 
+    // Log the actual response data for debugging
+    let responseText, responseJson;
+    try {
+      responseText = await response.text();
+      console.log(`Raw ESP32 response text: ${responseText}`);
+      if (responseText) {
+        try {
+          responseJson = JSON.parse(responseText);
+          console.log(`Parsed ESP32 response:`, responseJson);
+        } catch (e) {
+          console.log(`Could not parse response as JSON: ${e.message}`);
+        }
+      }
+    } catch (e) {
+      console.error(`Error reading response: ${e.message}`);
+    }
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`ESP32 returned error: ${response.status} - ${errorText}`);
+      console.error(`ESP32 returned error: ${response.status} - ${responseText}`);
       throw new Error(`Failed to send notification to ESP32: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    console.log(`ESP32 response:`, result);
-    
     // Update the last connection timestamp
     await supabase
       .from('user_devices')
@@ -145,10 +160,13 @@ export const sendNotificationToESP32 = async (deviceId: string, message: string,
       })
       .eq('device_id', deviceId);
     
-    return { success: true, result };
+    return { 
+      success: true, 
+      result: responseJson || { message: "Notification sent successfully" }
+    };
   } catch (error) {
     console.error('Error sending notification to ESP32:', error);
-    return { success: false, error };
+    return { success: false, error: error.message || String(error) };
   }
 };
 

@@ -29,7 +29,7 @@ export const fetchEsp32Notifications = async () => {
 // Function to send notification to all of user's ESP32 devices
 export const sendEsp32Notification = async (userId: string, message: string, type: 'buzzer' | 'led' | 'both' = 'both') => {
   try {
-    console.log(`Sending ESP32 notification to user ${userId} with message: ${message}`);
+    console.log(`Sending ESP32 notification to user ${userId} with message: ${message}, type: ${type}`);
     
     // Get all ESP32 devices for the user
     const { devices, success, error } = await getUserESP32Devices(userId);
@@ -47,6 +47,16 @@ export const sendEsp32Notification = async (userId: string, message: string, typ
     
     // Send notification to all devices
     const notificationPromises = devices.map(device => {
+      // Check if device has endpoint
+      if (!device.device_endpoint) {
+        console.log(`Device ${device.device_id} has no endpoint configured`);
+        return Promise.resolve({ 
+          device_id: device.device_id,
+          success: false, 
+          error: 'No endpoint configured' 
+        });
+      }
+      
       console.log(`Attempting to send notification to device: ${device.device_id} at ${device.device_endpoint}`);
       return sendNotificationToESP32(device.device_id, message, type);
     });
@@ -55,12 +65,14 @@ export const sendEsp32Notification = async (userId: string, message: string, typ
     const successCount = results.filter(r => r.success).length;
     
     console.log(`Successfully sent notifications to ${successCount}/${devices.length} ESP32 devices`);
+    console.log(`Notification results:`, results);
     
     return {
       success: successCount > 0,
       message: `Sent notifications to ${successCount}/${devices.length} ESP32 devices`,
       deviceCount: devices.length,
-      successCount
+      successCount,
+      results
     };
   } catch (error) {
     console.error('Error sending ESP32 notifications:', error);
@@ -71,10 +83,13 @@ export const sendEsp32Notification = async (userId: string, message: string, typ
 // Function to directly process email queue after demo notifications
 export const processEmailsAfterDemo = async () => {
   try {
-    // Pass a flag to prioritize demo emails in the queue
+    // Pass a flag to prioritize demo emails in the queue and prevent duplication
     const response = await supabase.functions.invoke('process-email-queue', {
       method: 'POST',
-      body: { prioritizeDemoEmails: true }
+      body: { 
+        prioritizeDemoEmails: true,
+        preventDuplicates: true 
+      }
     });
     
     if (response.error) {

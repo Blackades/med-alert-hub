@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { toast } from "@/hooks/use-toast";
 import { sendEsp32Notification } from './notifications';
@@ -22,6 +23,7 @@ export interface NotificationRequest {
   message?: string;
   testMode?: boolean;
   autoProcessEmails?: boolean; // New flag to auto-process emails
+  preventDuplicates?: boolean; // New flag to prevent duplicate emails
 }
 
 // Response interface
@@ -52,8 +54,15 @@ export const triggerNotification = async (options: NotificationRequest) => {
     // Always ensure demoMode is explicitly set in the request
     const requestOptions = {
       ...options,
-      demoMode: options.demoMode === true
+      demoMode: options.demoMode === true,
+      preventDuplicates: options.preventDuplicates !== false // Default to preventing duplicates
     };
+
+    // Add check to ensure medication ID is properly passed
+    if (!requestOptions.medicationId && !requestOptions.testMode) {
+      console.error("No medication ID provided for notification");
+      throw new Error("Medication ID is required");
+    }
 
     // First try sending directly to the medication-alerts function to ensure proper demo mode handling
     const alertsResponse = await supabase.functions.invoke('medication-alerts', {
@@ -117,7 +126,8 @@ export const triggerNotification = async (options: NotificationRequest) => {
     if (['esp32', 'both', 'all'].includes(options.notificationType || '')) {
       const message = options.customMessage || `Medication reminder: ${options.medicationId ? 'Time to take your medication' : 'Demo notification'}`;
       if (options.userId) {
-        await sendEsp32Notification(options.userId, message, 'both');
+        const result = await sendEsp32Notification(options.userId, message, 'both');
+        console.log("ESP32 notification result:", result);
       }
     }
     
@@ -155,6 +165,7 @@ export const triggerDemoNotification = async (
       notificationType,
       demoMode: true,
       autoProcessEmails: true, // Always auto-process emails for demo
+      preventDuplicates: true, // Prevent duplicate emails
       customMessage: "This is a demo notification"
     });
   } catch (error: any) {
@@ -210,6 +221,9 @@ export const processEmailQueue = async () => {
     console.log("Processing email queue...");
     const response = await supabase.functions.invoke('process-email-queue', {
       method: 'POST',
+      body: { 
+        preventDuplicates: true // Add flag to prevent duplicate emails
+      }
     });
     
     if (response.error) {

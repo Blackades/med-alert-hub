@@ -40,17 +40,16 @@ export const DemoModePanel = () => {
     setIsLoading(true);
     try {
       console.log("Triggering demo with:", { 
-        user: userId, 
-        medication: selectedMedication, 
+        userId, 
+        medicationId: selectedMedication, 
         type: notificationType,
-        demoMode: true,
-        autoProcessEmails: true // Auto-process emails after notification
+        demoMode: true
       });
       
-      // Call the medication-alerts endpoint directly with demoMode=true
+      // Call the notification service with the selected medication ID
       const response = await triggerNotification({
         userId: userId,
-        medicationId: selectedMedication,
+        medicationId: selectedMedication, // Use the selected medication ID directly
         notificationType: notificationType,
         customMessage: "This is a demo notification",
         demoMode: true, // Always set demoMode to true for demo panel
@@ -71,7 +70,7 @@ export const DemoModePanel = () => {
 
       toast({
         title: "Demo Triggered",
-        description: `Successfully triggered ${notificationType} notification demo`,
+        description: `Successfully triggered ${notificationType} notification demo for ${medications.find(m => m.id === selectedMedication)?.name || selectedMedication}`,
         variant: "default",
       });
     } catch (error: any) {
