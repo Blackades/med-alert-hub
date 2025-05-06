@@ -29,6 +29,8 @@ export const fetchEsp32Notifications = async () => {
 // Function to send notification to all of user's ESP32 devices
 export const sendEsp32Notification = async (userId: string, message: string, type: 'buzzer' | 'led' | 'both' = 'both') => {
   try {
+    console.log(`Sending ESP32 notification to user ${userId} with message: ${message}`);
+    
     // Get all ESP32 devices for the user
     const { devices, success, error } = await getUserESP32Devices(userId);
     
@@ -41,13 +43,18 @@ export const sendEsp32Notification = async (userId: string, message: string, typ
       return { success: true, message: 'No ESP32 devices found', deviceCount: 0 };
     }
     
+    console.log(`Found ${devices.length} ESP32 devices for user ${userId}`);
+    
     // Send notification to all devices
-    const notificationPromises = devices.map(device => 
-      sendNotificationToESP32(device.device_id, message, type)
-    );
+    const notificationPromises = devices.map(device => {
+      console.log(`Attempting to send notification to device: ${device.device_id} at ${device.device_endpoint}`);
+      return sendNotificationToESP32(device.device_id, message, type);
+    });
     
     const results = await Promise.all(notificationPromises);
     const successCount = results.filter(r => r.success).length;
+    
+    console.log(`Successfully sent notifications to ${successCount}/${devices.length} ESP32 devices`);
     
     return {
       success: successCount > 0,

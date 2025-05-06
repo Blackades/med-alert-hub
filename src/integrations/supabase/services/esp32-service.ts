@@ -11,7 +11,7 @@ export interface ESP32Device {
   is_active: boolean;
   created_at?: string;
   device_name?: string;
-  device_endpoint?: string; // Using device_endpoint instead of endpoint
+  device_endpoint?: string;
 }
 
 /**
@@ -19,6 +19,7 @@ export interface ESP32Device {
  */
 export const getUserESP32Devices = async (userId: string) => {
   try {
+    console.log(`Getting ESP32 devices for user: ${userId}`);
     const { data, error } = await supabase
       .from('user_devices')
       .select('*')
@@ -28,6 +29,7 @@ export const getUserESP32Devices = async (userId: string) => {
     
     if (error) throw error;
     
+    console.log(`Found ${data?.length || 0} ESP32 devices for user ${userId}`);
     return { success: true, devices: data as ESP32Device[] };
   } catch (error) {
     console.error('Error getting ESP32 devices:', error);
@@ -46,6 +48,7 @@ export const registerESP32Device = async (
   deviceEndpoint?: string
 ) => {
   try {
+    console.log(`Registering ESP32 device for user ${userId}: ${deviceId} at ${deviceEndpoint}`);
     const { data, error } = await supabase
       .from('user_devices')
       .insert({
@@ -63,6 +66,7 @@ export const registerESP32Device = async (
     
     if (error) throw error;
     
+    console.log(`Successfully registered ESP32 device: ${deviceId}`);
     toast({
       title: "Device Registered",
       description: "Your ESP32 device has been registered successfully.",
@@ -86,6 +90,8 @@ export const registerESP32Device = async (
  */
 export const sendNotificationToESP32 = async (deviceId: string, message: string, type: 'buzzer' | 'led' | 'both' = 'both') => {
   try {
+    console.log(`Sending notification to ESP32 device: ${deviceId}, type: ${type}`);
+    
     // Get the device details
     const { data: device, error: deviceError } = await supabase
       .from('user_devices')
@@ -98,12 +104,14 @@ export const sendNotificationToESP32 = async (deviceId: string, message: string,
       throw new Error(deviceError?.message || 'Device not found');
     }
 
-    // Use the stored device_endpoint instead of endpoint
-    const deviceEndpoint = device.device_endpoint || process.env.ESP32_ENDPOINT || '';
+    // Use the stored device_endpoint
+    const deviceEndpoint = device.device_endpoint;
     
     if (!deviceEndpoint) {
       throw new Error('No device_endpoint configured for ESP32 device');
     }
+
+    console.log(`Sending request to ESP32 at: ${deviceEndpoint}`);
 
     // Send notification to the physical device
     const response = await fetch(deviceEndpoint, {
@@ -115,15 +123,18 @@ export const sendNotificationToESP32 = async (deviceId: string, message: string,
       body: JSON.stringify({
         message,
         type, // What to activate: buzzer, led or both
-        duration: 5000, // Duration in ms
+        duration: 5000 // Duration in ms
       })
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`ESP32 returned error: ${response.status} - ${errorText}`);
       throw new Error(`Failed to send notification to ESP32: ${response.statusText}`);
     }
 
     const result = await response.json();
+    console.log(`ESP32 response:`, result);
     
     // Update the last connection timestamp
     await supabase

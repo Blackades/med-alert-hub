@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -42,6 +41,13 @@ const Devices = () => {
     },
   });
 
+  // Fixing the error - using useEffect correctly instead of useState
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchDevices();
+    }
+  }, [session?.user?.id]);
+  
   if (!session) {
     navigate("/auth");
     return null;
@@ -59,11 +65,6 @@ const Devices = () => {
       console.error("Error fetching devices:", error);
     }
   };
-  
-  // Fetch devices on initial load
-  useState(() => {
-    fetchDevices();
-  }, [session?.user?.id]);
   
   const handleRegister = async (data: z.infer<typeof deviceSchema>) => {
     if (!session?.user?.id) return;
