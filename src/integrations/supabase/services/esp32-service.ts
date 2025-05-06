@@ -9,9 +9,9 @@ export interface ESP32Device {
   device_token: string;
   user_id: string;
   is_active: boolean;
-  last_seen?: string;
-  name?: string;
-  endpoint?: string; // Added for physical device endpoint
+  created_at?: string;
+  device_name?: string;
+  device_endpoint?: string; // Using device_endpoint instead of endpoint
 }
 
 /**
@@ -43,7 +43,7 @@ export const registerESP32Device = async (
   deviceId: string,
   deviceToken: string,
   name?: string,
-  endpoint?: string
+  deviceEndpoint?: string
 ) => {
   try {
     const { data, error } = await supabase
@@ -54,9 +54,9 @@ export const registerESP32Device = async (
         device_token: deviceToken,
         device_type: 'esp32',
         is_active: true,
-        name: name || `ESP32 Device ${deviceId.substring(0, 6)}`,
-        last_seen: new Date().toISOString(),
-        endpoint: endpoint // Store the physical device endpoint
+        device_name: name || `ESP32 Device ${deviceId.substring(0, 6)}`,
+        created_at: new Date().toISOString(),
+        device_endpoint: deviceEndpoint // Store the device endpoint
       })
       .select()
       .single();
@@ -98,15 +98,15 @@ export const sendNotificationToESP32 = async (deviceId: string, message: string,
       throw new Error(deviceError?.message || 'Device not found');
     }
 
-    // Use the stored endpoint or fall back to default
-    const endpoint = device.endpoint || process.env.ESP32_ENDPOINT || '';
+    // Use the stored device_endpoint instead of endpoint
+    const deviceEndpoint = device.device_endpoint || process.env.ESP32_ENDPOINT || '';
     
-    if (!endpoint) {
-      throw new Error('No endpoint configured for ESP32 device');
+    if (!deviceEndpoint) {
+      throw new Error('No device_endpoint configured for ESP32 device');
     }
 
     // Send notification to the physical device
-    const response = await fetch(endpoint, {
+    const response = await fetch(deviceEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -125,10 +125,13 @@ export const sendNotificationToESP32 = async (deviceId: string, message: string,
 
     const result = await response.json();
     
-    // Update last seen timestamp
+    // Update the last connection timestamp
     await supabase
       .from('user_devices')
-      .update({ last_seen: new Date().toISOString() })
+      .update({ 
+        is_active: true, 
+        created_at: new Date().toISOString() // Using created_at as the timestamp field
+      })
       .eq('device_id', deviceId);
     
     return { success: true, result };
@@ -147,7 +150,7 @@ export const updateESP32DeviceStatus = async (deviceId: string, isActive: boolea
       .from('user_devices')
       .update({
         is_active: isActive,
-        last_seen: isActive ? new Date().toISOString() : undefined
+        created_at: isActive ? new Date().toISOString() : undefined // Using created_at instead of last_seen
       })
       .eq('device_id', deviceId)
       .eq('device_type', 'esp32')
