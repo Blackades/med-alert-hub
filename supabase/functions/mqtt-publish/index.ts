@@ -9,11 +9,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
 
-// MQTT broker settings
+// MQTT broker settings to match ESP8266 sketch
 const mqttBroker = Deno.env.get('MQTT_BROKER') || 'df116a1a463d460c99605be93a4db7db.s1.eu.hivemq.cloud';
 const mqttPort = Deno.env.get('MQTT_PORT') || '8883';
 const mqttUsername = Deno.env.get('MQTT_USERNAME') || 'hivemq.webclient.1746829092080';
-const mqttPassword = Deno.env.get('MQTT_PASSWORD') || 'IvHQa.w*0r8i5L7,mT:X';
+const mqttPassword = Deno.env.get('MQTT_PASSWORD') || 'lvHQa.w*0r8i5L7,mT:X';
 
 // Generate a random client ID for each connection
 const generateClientId = () => {
@@ -85,8 +85,8 @@ serve(async (req) => {
     
     console.log("MQTT connection result:", connectionResult);
     
-    // Publish the message
-    const effectiveTopic = topic || `meditrack/alerts/${deviceId || 'all'}`;
+    // Publish the message - use the expected topic format for ESP8266
+    const effectiveTopic = topic || 'medication/reminders';
     console.log(`Publishing message to topic: ${effectiveTopic}`);
     
     const publishResult = await new Promise((resolve, reject) => {
