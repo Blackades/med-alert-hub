@@ -2,9 +2,10 @@
 import { supabase } from '../client';
 import { toast } from "@/hooks/use-toast";
 import { sendEsp32Notification } from './notifications';
+import { sendMqttNotificationsToAllDevices } from './notifications';
 
 // Types that match backend schema
-export type NotificationType = 'email' | 'sms' | 'esp32' | 'both' | 'all';
+export type NotificationType = 'email' | 'sms' | 'esp32' | 'mqtt' | 'both' | 'all';
 export type PriorityLevel = 'low' | 'medium' | 'high' | 'urgent';
 
 // Request interface that matches the backend Zod schema
@@ -97,11 +98,40 @@ export const triggerNotification = async (options: NotificationRequest) => {
         await processEmailQueue();
       }
       
-      // Handle ESP32 physical device notification
-      if (['esp32', 'both', 'all'].includes(options.notificationType || '')) {
+      // Fetch medication details if needed for MQTT notifications
+      let medicationDetails = {};
+      if (['mqtt', 'esp32', 'both', 'all'].includes(options.notificationType || '') && options.medicationId) {
+        try {
+          const { data: medication } = await supabase
+            .from('medications')
+            .select('*')
+            .eq('id', options.medicationId)
+            .single();
+          
+          if (medication) {
+            medicationDetails = {
+              medicationId: medication.id,
+              name: medication.name,
+              dosage: medication.dosage,
+              instructions: medication.instructions
+            };
+          }
+        } catch (err) {
+          console.error("Error fetching medication details:", err);
+        }
+      }
+      
+      // Handle ESP32 & MQTT physical device notification
+      if (['esp32', 'mqtt', 'both', 'all'].includes(options.notificationType || '')) {
         const message = options.customMessage || `Medication reminder: ${options.medicationId ? 'Time to take your medication' : 'Demo notification'}`;
         if (options.userId) {
-          await sendEsp32Notification(options.userId, message, 'both');
+          // Send both ESP32 direct and MQTT notifications
+          if (['mqtt', 'both', 'all'].includes(options.notificationType || '')) {
+            await sendMqttNotificationsToAllDevices(options.userId, message, medicationDetails);
+          }
+          if (['esp32', 'both', 'all'].includes(options.notificationType || '')) {
+            await sendEsp32Notification(options.userId, message, 'both');
+          }
         }
       }
       
@@ -122,12 +152,42 @@ export const triggerNotification = async (options: NotificationRequest) => {
       await processEmailQueue();
     }
     
-    // Handle ESP32 physical device notification
-    if (['esp32', 'both', 'all'].includes(options.notificationType || '')) {
+    // Fetch medication details if needed for MQTT notifications
+    let medicationDetails = {};
+    if (['mqtt', 'esp32', 'both', 'all'].includes(options.notificationType || '') && options.medicationId) {
+      try {
+        const { data: medication } = await supabase
+          .from('medications')
+          .select('*')
+          .eq('id', options.medicationId)
+          .single();
+        
+        if (medication) {
+          medicationDetails = {
+            medicationId: medication.id,
+            name: medication.name,
+            dosage: medication.dosage,
+            instructions: medication.instructions
+          };
+        }
+      } catch (err) {
+        console.error("Error fetching medication details:", err);
+      }
+    }
+    
+    // Handle ESP32 & MQTT physical device notification
+    if (['esp32', 'mqtt', 'both', 'all'].includes(options.notificationType || '')) {
       const message = options.customMessage || `Medication reminder: ${options.medicationId ? 'Time to take your medication' : 'Demo notification'}`;
       if (options.userId) {
-        const result = await sendEsp32Notification(options.userId, message, 'both');
-        console.log("ESP32 notification result:", result);
+        // Send both ESP32 direct and MQTT notifications
+        if (['mqtt', 'both', 'all'].includes(options.notificationType || '')) {
+          const mqttResult = await sendMqttNotificationsToAllDevices(options.userId, message, medicationDetails);
+          console.log("MQTT notification result:", mqttResult);
+        }
+        if (['esp32', 'both', 'all'].includes(options.notificationType || '')) {
+          const result = await sendEsp32Notification(options.userId, message, 'both');
+          console.log("ESP32 notification result:", result);
+        }
       }
     }
     
@@ -153,7 +213,7 @@ export const triggerNotification = async (options: NotificationRequest) => {
 export const triggerDemoNotification = async (
   userId: string, 
   medicationId: string, 
-  notificationType: 'email' | 'esp32' | 'both'
+  notificationType: 'email' | 'mqtt' | 'esp32' | 'both'
 ) => {
   try {
     console.log(`Triggering demo notification: userId=${userId}, medicationId=${medicationId}, type=${notificationType}`);
