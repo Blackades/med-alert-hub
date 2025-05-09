@@ -88,6 +88,7 @@ serve(async (req) => {
     // Publish the message - use the expected topic format for ESP8266
     const effectiveTopic = topic || 'medication/reminders';
     console.log(`Publishing message to topic: ${effectiveTopic}`);
+    console.log(`Payload:`, JSON.stringify(payload, null, 2));
     
     const publishResult = await new Promise((resolve, reject) => {
       client.publish(

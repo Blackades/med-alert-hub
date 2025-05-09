@@ -7,11 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useMedications } from "@/contexts/MedicationContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Mail, Smartphone, Info, RefreshCw } from "lucide-react";
+import { Loader2, Mail, Smartphone, Info, RefreshCw, Wifi } from "lucide-react";
 import { triggerNotification, processEmailQueue, getESP32NotificationData } from "@/integrations/supabase/services/notification-service";
 
 // Define compatible notification types for the demo panel
-type DemoPanelNotificationType = "email" | "esp32" | "both";
+type DemoPanelNotificationType = "email" | "esp32" | "mqtt" | "both";
 
 export const DemoModePanel = () => {
   const { user } = useAuth();
@@ -163,9 +163,12 @@ export const DemoModePanel = () => {
             <div>
               <label className="text-sm font-medium mb-1 block">Notification Type</label>
               <Tabs defaultValue="email" value={notificationType} onValueChange={(value) => setNotificationType(value as DemoPanelNotificationType)}>
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="email" className="flex items-center gap-2">
                     <Mail className="h-4 w-4" /> Email
+                  </TabsTrigger>
+                  <TabsTrigger value="mqtt" className="flex items-center gap-2">
+                    <Wifi className="h-4 w-4" /> MQTT
                   </TabsTrigger>
                   <TabsTrigger value="esp32" className="flex items-center gap-2">
                     <Smartphone className="h-4 w-4" /> ESP32
@@ -235,7 +238,7 @@ export const DemoModePanel = () => {
           {!user && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-700 text-sm">
               <p className="font-medium">Note: You are using demo mode while not logged in.</p>
-              <p className="mt-1">All notifications will be simulated and not sent to real email addresses.</p>
+              <p className="mt-1">All notifications will be simulated and not sent to real email addresses or devices.</p>
             </div>
           )}
         </div>

@@ -84,6 +84,59 @@ export const sendMqttNotification = async (
 };
 
 /**
+ * Send MQTT notifications to all user's active devices
+ */
+export const sendMqttNotificationsToAllDevices = async (
+  userId: string,
+  message: string,
+  medicationDetails: any = {}
+) => {
+  try {
+    console.log(`Sending MQTT notifications to all devices for user: ${userId}`);
+    
+    // Get all active MQTT devices for the user
+    const { devices } = await getUserMqttDevices(userId);
+    
+    if (!devices || devices.length === 0) {
+      console.log(`No active MQTT devices found for user: ${userId}`);
+      return { 
+        success: false, 
+        message: "No active MQTT devices found", 
+        sentCount: 0 
+      };
+    }
+    
+    console.log(`Found ${devices.length} MQTT devices for user ${userId}`);
+    
+    // Send notification to each device
+    const notificationPromises = devices.map(device => 
+      sendMqttNotification(userId, device.device_id, message, medicationDetails)
+    );
+    
+    const results = await Promise.all(notificationPromises);
+    const successCount = results.filter(r => r.success).length;
+    
+    console.log(`Successfully sent MQTT notifications to ${successCount} of ${devices.length} devices`);
+    
+    return {
+      success: successCount > 0,
+      message: `Sent to ${successCount}/${devices.length} devices`,
+      sentCount: successCount,
+      totalDevices: devices.length,
+      results
+    };
+  } catch (error) {
+    console.error('Error sending MQTT notifications to devices:', error);
+    return { 
+      success: false, 
+      error, 
+      message: error instanceof Error ? error.message : "Unknown error",
+      sentCount: 0 
+    };
+  }
+};
+
+/**
  * Function to register a device with MQTT capabilities
  */
 export const registerMqttDevice = async (
