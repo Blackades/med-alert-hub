@@ -35,11 +35,14 @@ serve(async (req) => {
     const requestData = await req.json();
     const { topic, payload, deviceId } = requestData;
     
-    if (!topic || !payload) {
+    // Default topic as in the ESP8266 sketch if not provided
+    const defaultTopic = "medication/reminders";
+    
+    if (!payload) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Missing required fields: topic and payload"
+          error: "Missing required field: payload"
         }),
         {
           status: 400,
@@ -85,30 +88,41 @@ serve(async (req) => {
     
     console.log("MQTT connection result:", connectionResult);
     
-    // Prepare the message payload - ensure it matches what ESP8266 expects
-    let finalPayload = payload;
+    // Format the payload according to what the ESP8266 sketch expects
+    let finalPayload: any = {};
     
-    // If it's an object, ensure it has the minimum required fields for ESP8266
-    if (typeof payload === 'object') {
-      // Make sure object has all the required fields
+    if (typeof payload === 'string') {
+      // Try to parse if it's a JSON string
+      try {
+        finalPayload = JSON.parse(payload);
+      } catch (e) {
+        // If not valid JSON, use it as the medication name
+        finalPayload = {
+          medication: payload,
+          dosage: "Standard Dose",
+          instructions: ""
+        };
+      }
+    } else if (typeof payload === 'object') {
+      // If it's already an object, ensure it has the required fields
       finalPayload = {
         medication: payload.medication || payload.name || "Unknown Medication",
         dosage: payload.dosage || "Standard Dose",
         instructions: payload.instructions || payload.message || "",
-        timestamp: payload.timestamp || new Date().toISOString(),
-        ...payload
       };
     }
     
-    // Publish the message - use the expected topic format for ESP8266
-    const effectiveTopic = topic || 'medication/reminders';
+    // Ensure the payload matches exactly what the ESP8266 sketch expects
+    console.log(`Prepared payload for ESP8266:`, JSON.stringify(finalPayload, null, 2));
+    
+    // Use the topic from request or fallback to default
+    const effectiveTopic = topic || defaultTopic;
     console.log(`Publishing message to topic: ${effectiveTopic}`);
-    console.log(`Payload:`, JSON.stringify(finalPayload, null, 2));
     
     const publishResult = await new Promise((resolve, reject) => {
       client.publish(
         effectiveTopic,
-        typeof finalPayload === 'string' ? finalPayload : JSON.stringify(finalPayload),
+        JSON.stringify(finalPayload),
         { qos: 1, retain: false },
         (err, packet) => {
           if (err) {

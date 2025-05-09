@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, Smartphone, Info, RefreshCw, Wifi } from "lucide-react";
 import { triggerNotification, processEmailQueue, getESP32NotificationData } from "@/integrations/supabase/services/notification-service";
+import { supabase } from "@/integrations/supabase/client";
+import { sendMqttNotificationsToAllDevices } from "@/integrations/supabase/services/mqtt-service";
 
 // Define compatible notification types for the demo panel
 type DemoPanelNotificationType = "email" | "esp32" | "mqtt" | "both";
@@ -22,6 +25,7 @@ export const DemoModePanel = () => {
   const [isProcessingEmails, setIsProcessingEmails] = useState(false);
   const [esp32Data, setEsp32Data] = useState<any>(null);
   const [isLoadingEsp32Data, setIsLoadingEsp32Data] = useState(false);
+  const [isSending, setIsSending] = useState(false); // Add the missing state variable
 
   const handleTriggerDemo = async () => {
     if (!selectedMedication) {
