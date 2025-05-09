@@ -89,7 +89,11 @@ serve(async (req) => {
     console.log("MQTT connection result:", connectionResult);
     
     // Format the payload according to what the ESP8266 sketch expects
-    let finalPayload: any = {};
+    let finalPayload = {
+      medication: "",
+      dosage: "",
+      instructions: ""
+    };
     
     if (typeof payload === 'string') {
       // Try to parse if it's a JSON string
@@ -108,7 +112,7 @@ serve(async (req) => {
       finalPayload = {
         medication: payload.medication || payload.name || "Unknown Medication",
         dosage: payload.dosage || "Standard Dose",
-        instructions: payload.instructions || payload.message || "",
+        instructions: payload.instructions || payload.message || ""
       };
     }
     

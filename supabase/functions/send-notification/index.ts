@@ -1,3 +1,4 @@
+
 // Implementation of the send-notification edge function
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
@@ -241,9 +242,10 @@ serve(async (req) => {
       });
     }
     
-    // Check for demo mode
+    // Check for demo mode and prevent duplicates
     const isDemoMode = requestData.demoMode === true;
-    console.log(`[${requestId}] Demo mode: ${isDemoMode ? "ENABLED" : "DISABLED"}`);
+    const preventDuplicates = requestData.preventDuplicates !== false; // Default to preventing duplicates
+    console.log(`[${requestId}] Demo mode: ${isDemoMode ? "ENABLED" : "DISABLED"}, Prevent duplicates: ${preventDuplicates ? "ENABLED" : "DISABLED"}`);
     
     // Create client with error handling
     let supabase;
@@ -335,7 +337,6 @@ serve(async (req) => {
     
     console.log(`[${requestId}] Processing ${effectiveNotificationType} notification for user ${effectiveUserId}${isDemoMode ? " (DEMO MODE)" : ""}`);
     
-    // If in demo mode and we have a specific demo recipient email
     let userData = null;
     let fakeUser = false;
     
@@ -430,6 +431,25 @@ serve(async (req) => {
           dosage: "10mg",
           instructions: "Take with water as directed"
         };
+        
+        // If medicationId is provided, try to get the real medication name
+        if (effectiveMedicationId && effectiveMedicationId !== 'demo-medication-id') {
+          try {
+            const { data, error } = await supabase
+              .from("medications")
+              .select("name, dosage, instructions")
+              .eq("id", effectiveMedicationId)
+              .maybeSingle();
+              
+            if (!error && data) {
+              medication = data;
+              console.log(`[${requestId}] Found actual medication data for demo mode:`, medication);
+            }
+          } catch (err) {
+            console.warn(`[${requestId}] Could not fetch medication details in demo mode:`, err);
+            // Continue with placeholder data
+          }
+        }
       }
     } catch (error) {
       console.error(`[${requestId}] Medication data fetch error:`, error.message);
@@ -457,6 +477,45 @@ serve(async (req) => {
     }
     
     console.log(`[${requestId}] Medication data:`, medication);
+    
+    // Check for duplicates if prevention is enabled
+    if (preventDuplicates) {
+      try {
+        // Look for recent notifications for this medication to this user
+        const fifteenSecondsAgo = new Date();
+        fifteenSecondsAgo.setSeconds(fifteenSecondsAgo.getSeconds() - 15);
+        
+        const { data: recentNotifications, error: recentError } = await supabase
+          .from("notification_logs")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .eq("medication_id", effectiveMedicationId)
+          .gte("created_at", fifteenSecondsAgo.toISOString())
+          .limit(1);
+          
+        if (recentError) {
+          console.warn(`[${requestId}] Error checking for recent notifications:`, recentError);
+        } else if (recentNotifications && recentNotifications.length > 0) {
+          console.log(`[${requestId}] Found recent notification for same medication, skipping to prevent duplicate`);
+          return new Response(JSON.stringify({
+            success: true,
+            message: "Skipped notification to prevent duplicate",
+            duplicate: true,
+            timestamp: new Date().toISOString(),
+            requestId
+          }), {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json"
+            }
+          });
+        }
+      } catch (dupError) {
+        console.warn(`[${requestId}] Error checking for duplicates:`, dupError);
+        // Continue execution even if duplicate check fails
+      }
+    }
     
     // Log the notification request in a try-catch block to prevent failure
     try {

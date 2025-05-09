@@ -25,13 +25,24 @@ export const DemoModePanel = () => {
   const [isProcessingEmails, setIsProcessingEmails] = useState(false);
   const [esp32Data, setEsp32Data] = useState<any>(null);
   const [isLoadingEsp32Data, setIsLoadingEsp32Data] = useState(false);
-  const [isSending, setIsSending] = useState(false); // Add the missing state variable
+  const [isSending, setIsSending] = useState(false);
 
   const handleTriggerDemo = async () => {
     if (!selectedMedication) {
       toast({
         title: "Error",
         description: "Please select a medication first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Find the selected medication details
+    const selectedMed = medications.find(med => med.id === selectedMedication);
+    if (!selectedMed) {
+      toast({
+        title: "Error",
+        description: "Could not find the selected medication",
         variant: "destructive",
       });
       return;
@@ -46,18 +57,20 @@ export const DemoModePanel = () => {
         userId, 
         medicationId: selectedMedication, 
         type: notificationType,
-        demoMode: true
+        demoMode: true,
+        medication: selectedMed
       });
       
       // Call the notification service with the selected medication ID
       const response = await triggerNotification({
         userId: userId,
-        medicationId: selectedMedication, // Use the selected medication ID directly
+        medicationId: selectedMedication,
         notificationType: notificationType,
-        customMessage: "This is a demo notification",
-        demoMode: true, // Always set demoMode to true for demo panel
+        customMessage: `Demo notification for ${selectedMed.name}`,
+        demoMode: true,
         testMode: !user, // If no user, use test mode to avoid auth issues
-        autoProcessEmails: true // Auto-process emails immediately
+        autoProcessEmails: true, // Auto-process emails immediately
+        preventDuplicates: true // Prevent duplicate emails
       });
 
       if (!response.success) {
@@ -73,7 +86,7 @@ export const DemoModePanel = () => {
 
       toast({
         title: "Demo Triggered",
-        description: `Successfully triggered ${notificationType} notification demo for ${medications.find(m => m.id === selectedMedication)?.name || selectedMedication}`,
+        description: `Successfully triggered ${notificationType} notification demo for ${selectedMed.name}`,
         variant: "default",
       });
     } catch (error: any) {
@@ -141,12 +154,21 @@ export const DemoModePanel = () => {
 
     setIsSending(true);
     try {
-      // We'll use a hardcoded medication name instead of 'N2' to avoid confusion
+      // Find the selected medication details or use a fallback
+      const selectedMed = selectedMedication ? 
+        medications.find(med => med.id === selectedMedication) : 
+        { name: "Demo Medication", dosage: "Standard Dose", instructions: "Take as directed" };
+      
+      if (!selectedMed) {
+        throw new Error("Could not find the selected medication");
+      }
+      
+      // Create a proper demo medication object
       const demoMedication = {
-        name: "Aspirin",
-        dosage: "81mg",
-        instructions: "Take with food",
-        medicationId: "demo-" + Math.random().toString(36).substring(2, 9),
+        name: selectedMed.name,
+        dosage: selectedMed.dosage,
+        instructions: selectedMed.instructions || "Take as directed",
+        medicationId: selectedMedication || "demo-" + Math.random().toString(36).substring(2, 9),
         action: 'reminder'
       };
       
@@ -159,6 +181,7 @@ export const DemoModePanel = () => {
           medicationName: demoMedication.name,
           dosage: demoMedication.dosage,
           instructions: demoMedication.instructions,
+          preventDuplicates: true
         },
       });
 
@@ -185,7 +208,7 @@ export const DemoModePanel = () => {
 
       toast({
         title: "Demo Notification Sent",
-        description: "Check your inbox for the demo notification email and watch for device alerts.",
+        description: `Check your inbox for the demo notification email for ${demoMedication.name} and watch for device alerts.`,
       });
     } catch (error: any) {
       console.error("Demo notification error:", error);
