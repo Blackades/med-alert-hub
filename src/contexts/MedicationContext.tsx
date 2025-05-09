@@ -6,6 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import type { Medication, MedicationWithStatus } from "@/types/medication";
 import { getMedicationStatus, calculateNextDose } from "@/utils/MedicationUtils";
 import { getMedicationStreak as fetchMedicationStreak } from "@/integrations/supabase/services/streaks";
+import { sendMqttNotification } from "@/integrations/supabase/services/mqtt-service";
 
 type MedicationContextType = {
   medications: Medication[];
@@ -190,17 +191,40 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
       const medication = medications.find(med => med.id === id);
       if (!medication) return;
 
-      // Call the medication-status service to handle the backend updates
+      // Log the medication as taken but don't permanently mark it as taken
       const { data, error } = await supabase.functions.invoke('handle-medication-status', {
         body: {
           action: 'take',
           medicationId: id,
           takenAt: new Date().toISOString(),
+          updateStatus: true,  // This will update the log but not mark the medication as permanently taken
         },
       });
 
       if (error) throw error;
       console.log("Medication taken response:", data);
+
+      // Send MQTT notification if supported
+      try {
+        // Find the actual medication details to send in the notification
+        if (medication) {
+          await sendMqttNotification(
+            user?.id || '',
+            'all',  // Send to all registered devices
+            `Medication ${medication.name} taken`,
+            {
+              name: medication.name,
+              dosage: medication.dosage,
+              instructions: medication.instructions || '',
+              medicationId: medication.id,
+              action: 'taken'
+            }
+          );
+        }
+      } catch (mqttError) {
+        console.error("MQTT notification error:", mqttError);
+        // Continue even if MQTT fails
+      }
 
       // Refresh the medications list to show updated state
       await fetchMedications();
@@ -222,17 +246,41 @@ export const MedicationProvider = ({ children }: { children: ReactNode }) => {
 
   const skipMedication = async (id: string) => {
     try {
+      const medication = medications.find(med => med.id === id);
+
       // Call the medication-status service instead of directly updating
       const { data, error } = await supabase.functions.invoke('handle-medication-status', {
         body: {
           action: 'skip',
           medicationId: id,
-          reason: "Skipped by user"
+          reason: "Skipped by user",
+          updateStatus: true  // This will update the log but not mark the medication as permanently skipped
         },
       });
 
       if (error) throw error;
       console.log("Medication skipped response:", data);
+
+      // Send MQTT notification if supported
+      try {
+        if (medication) {
+          await sendMqttNotification(
+            user?.id || '',
+            'all',
+            `Medication ${medication.name} skipped`,
+            {
+              name: medication.name,
+              dosage: medication.dosage,
+              instructions: medication.instructions || '',
+              medicationId: medication.id,
+              action: 'skipped'
+            }
+          );
+        }
+      } catch (mqttError) {
+        console.error("MQTT notification error:", mqttError);
+        // Continue even if MQTT fails
+      }
 
       // Refresh the medications list to show updated state
       await fetchMedications();

@@ -85,15 +85,30 @@ serve(async (req) => {
     
     console.log("MQTT connection result:", connectionResult);
     
+    // Prepare the message payload - ensure it matches what ESP8266 expects
+    let finalPayload = payload;
+    
+    // If it's an object, ensure it has the minimum required fields for ESP8266
+    if (typeof payload === 'object') {
+      // Make sure object has all the required fields
+      finalPayload = {
+        medication: payload.medication || payload.name || "Unknown Medication",
+        dosage: payload.dosage || "Standard Dose",
+        instructions: payload.instructions || payload.message || "",
+        timestamp: payload.timestamp || new Date().toISOString(),
+        ...payload
+      };
+    }
+    
     // Publish the message - use the expected topic format for ESP8266
     const effectiveTopic = topic || 'medication/reminders';
     console.log(`Publishing message to topic: ${effectiveTopic}`);
-    console.log(`Payload:`, JSON.stringify(payload, null, 2));
+    console.log(`Payload:`, JSON.stringify(finalPayload, null, 2));
     
     const publishResult = await new Promise((resolve, reject) => {
       client.publish(
         effectiveTopic,
-        typeof payload === 'string' ? payload : JSON.stringify(payload),
+        typeof finalPayload === 'string' ? finalPayload : JSON.stringify(finalPayload),
         { qos: 1, retain: false },
         (err, packet) => {
           if (err) {
@@ -117,7 +132,8 @@ serve(async (req) => {
         topic: effectiveTopic,
         clientId,
         timestamp: new Date().toISOString(),
-        message: "Message published successfully"
+        message: "Message published successfully",
+        payload: finalPayload
       }),
       {
         headers: {

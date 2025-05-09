@@ -77,6 +77,8 @@ export function MedicationCard({
         return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">Overdue</Badge>;
       case "upcoming": 
         return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">Due Now</Badge>;
+      case "missed":
+        return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">Missed</Badge>;
       default: 
         return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Upcoming</Badge>;
     }
@@ -147,7 +149,7 @@ export function MedicationCard({
               </div>
             </div>
             
-            {showActions && status !== 'taken' && (
+            {showActions && (
               <div className="flex gap-2 mt-4">
                 <Button 
                   variant="outline" 

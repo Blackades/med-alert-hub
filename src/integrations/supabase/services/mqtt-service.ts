@@ -31,7 +31,7 @@ export const sendMqttNotification = async (
     // Generate unique request ID for tracing
     const requestId = uuidv4();
 
-    // Format the payload to match what the ESP8266 expects
+    // Format the payload to match what the ESP8266 expects - this must match the ESP8266 code format
     const payload = {
       medication: medicationDetails.name || "Unknown Medication",
       dosage: medicationDetails.dosage || "As prescribed",
@@ -39,9 +39,12 @@ export const sendMqttNotification = async (
       timestamp: new Date().toISOString(),
       alertType: 'medication',
       medicationId: medicationDetails.medicationId || null,
+      action: medicationDetails.action || 'reminder',
       requestId,
       deviceId
     };
+
+    console.log("Sending MQTT payload:", payload);
 
     // Call Supabase Edge Function to publish MQTT message
     const response = await supabase.functions.invoke('mqtt-publish', {
@@ -99,6 +102,16 @@ export const sendMqttNotificationsToAllDevices = async (
     
     if (!devices || devices.length === 0) {
       console.log(`No active MQTT devices found for user: ${userId}`);
+      
+      // Send to a default device in case we're in demo mode
+      if (medicationDetails.demoMode) {
+        console.log("Demo mode enabled, sending to demo device");
+        return await sendMqttNotification(userId, "demo-device", message, {
+          ...medicationDetails,
+          name: medicationDetails.name || "Demo Medication", 
+        });
+      }
+      
       return { 
         success: false, 
         message: "No active MQTT devices found", 
@@ -127,6 +140,16 @@ export const sendMqttNotificationsToAllDevices = async (
     };
   } catch (error) {
     console.error('Error sending MQTT notifications to devices:', error);
+    
+    // Try sending to demo device if in demo mode
+    if (medicationDetails.demoMode) {
+      console.log("Error with regular devices but demo mode enabled, sending to demo device");
+      return await sendMqttNotification(userId, "demo-device", message, {
+        ...medicationDetails,
+        name: medicationDetails.name || "Demo Medication",
+      });
+    }
+    
     return { 
       success: false, 
       error, 

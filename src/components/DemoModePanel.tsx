@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import { triggerNotification, processEmailQueue, getESP32NotificationData } from
 type DemoPanelNotificationType = "email" | "esp32" | "mqtt" | "both";
 
 export const DemoModePanel = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   const { medications } = useMedications();
   const [selectedMedication, setSelectedMedication] = useState<string>("");
@@ -123,6 +122,76 @@ export const DemoModePanel = () => {
       });
     } finally {
       setIsProcessingEmails(false);
+    }
+  };
+
+  const handleDemoNotification = async () => {
+    if (!session) {
+      toast({
+        title: "Not logged in",
+        description: "You need to be logged in to trigger a demo notification.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      // We'll use a hardcoded medication name instead of 'N2' to avoid confusion
+      const demoMedication = {
+        name: "Aspirin",
+        dosage: "81mg",
+        instructions: "Take with food",
+        medicationId: "demo-" + Math.random().toString(36).substring(2, 9),
+        action: 'reminder'
+      };
+      
+      // Send email notification
+      const emailResult = await supabase.functions.invoke("demo-notification", {
+        body: {
+          userId: user.id,
+          email: user.email,
+          recipientName: "Demo User",
+          medicationName: demoMedication.name,
+          dosage: demoMedication.dosage,
+          instructions: demoMedication.instructions,
+        },
+      });
+
+      // Also send MQTT notification if applicable
+      try {
+        const mqttResponse = await sendMqttNotificationsToAllDevices(
+          user.id, 
+          `Time to take your ${demoMedication.name}`,
+          {
+            ...demoMedication,
+            demoMode: true
+          }
+        );
+        
+        console.log("MQTT demo notification response:", mqttResponse);
+      } catch (mqttError) {
+        console.error("MQTT demo notification error:", mqttError);
+        // Continue even if MQTT fails
+      }
+
+      if (emailResult.error) {
+        throw new Error(emailResult.error.message || "Failed to send demo notification");
+      }
+
+      toast({
+        title: "Demo Notification Sent",
+        description: "Check your inbox for the demo notification email and watch for device alerts.",
+      });
+    } catch (error: any) {
+      console.error("Demo notification error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send demo notification",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
     }
   };
 
