@@ -70,7 +70,8 @@ serve(async (req) => {
               medicationId: alert.id,
               notificationType: 'email', // Default to email
               customMessage: `Time to take your ${alert.name} (${alert.dosage})`,
-              priorityLevel: 'high'
+              priorityLevel: 'high',
+              preventDuplicates: true // Prevent duplicate notifications
             }
           });
         });
@@ -113,10 +114,10 @@ serve(async (req) => {
         });
       }
       
-      const { userId, medicationId, notificationType, demoMode, customMessage, testMode } = body;
+      const { userId, medicationId, notificationType, demoMode, customMessage, testMode, preventDuplicates } = body;
       
       // Log received parameters for debugging
-      console.log(`[${requestId}] Received parameters:`, { userId, medicationId, notificationType, demoMode, customMessage, testMode });
+      console.log(`[${requestId}] Received parameters:`, { userId, medicationId, notificationType, demoMode, customMessage, testMode, preventDuplicates });
       
       // Check for demo mode or test mode
       const isDemoMode = demoMode === true || testMode === true;
@@ -146,7 +147,7 @@ serve(async (req) => {
       // Fetch the user to verify they exist
       const { data: user, error: userError } = await supabaseAdmin
         .from('profiles')
-        .select('id, email, display_name, notification_preferences')
+        .select('id, email, notification_preferences')
         .eq('id', effectiveUserId)
         .maybeSingle();
       
@@ -176,7 +177,6 @@ serve(async (req) => {
           placeholderUser = {
             id: effectiveUserId,
             email: testMode ? body.recipientEmail || "demo@example.com" : "demo@example.com",
-            display_name: "Demo User",
             notification_preferences: { default_type: "email" }
           };
         } else {
@@ -195,43 +195,56 @@ serve(async (req) => {
       
       const effectiveUser = user || placeholderUser;
       
-      // Fetch the medication
-      const { data: medication, error: medError } = await supabaseAdmin
-        .from('medications')
-        .select('*')
-        .eq('id', effectiveMedicationId)
-        .maybeSingle();
-      
-      if (medError) {
-        console.error(`[${requestId}] Error fetching medication: ${medError.message}`);
-        return new Response(JSON.stringify({
-          success: false,
-          error: `Failed to fetch medication: ${medError.message}`
-        }), {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          }
-        });
-      }
-      
+      // CRITICAL FIX: Fetch the medication with proper error handling and logging
+      let medication = null;
       let placeholderMedication = null;
       
+      try {
+        // Only fetch if we have a valid medication ID that's not the demo ID
+        if (effectiveMedicationId && effectiveMedicationId !== 'demo-medication-id') {
+          console.log(`[${requestId}] Fetching medication details for ID: ${effectiveMedicationId}`);
+          
+          const { data, error } = await supabaseAdmin
+            .from('medications')
+            .select('*')
+            .eq('id', effectiveMedicationId)
+            .maybeSingle();
+          
+          if (error) {
+            console.error(`[${requestId}] Error fetching medication: ${error.message}`);
+            throw error;
+          }
+          
+          if (data) {
+            medication = data;
+            console.log(`[${requestId}] Successfully retrieved medication:`, medication);
+          } else {
+            console.warn(`[${requestId}] No medication found with ID: ${effectiveMedicationId}`);
+          }
+        } else {
+          console.log(`[${requestId}] No valid medication ID provided, will use placeholder data`);
+        }
+      } catch (error) {
+        console.error(`[${requestId}] Failed to fetch medication: ${error}`);
+      }
+      
+      // Create placeholder medication if needed for demo mode or if fetch failed
       if (!medication) {
-        console.warn(`[${requestId}] Medication with ID ${effectiveMedicationId} not found`);
-        
         if (isDemoMode) {
-          console.log(`[${requestId}] Running in demo mode - will proceed with placeholder medication data`);
-          // Create a placeholder medication for demo purposes
+          console.log(`[${requestId}] Creating placeholder medication data for demo mode`);
+          
+          // Use display name "Demo Medication" instead of "N2"
           placeholderMedication = {
             id: effectiveMedicationId,
-            name: "Demo Medication",
+            name: "Demo Medication", // Changed from "N2" to "Demo Medication"
             dosage: "10mg",
             instructions: "Take with water",
             user_id: effectiveUserId
           };
+          
+          console.log(`[${requestId}] Created placeholder medication:`, placeholderMedication);
         } else {
+          console.error(`[${requestId}] Medication with ID ${effectiveMedicationId} not found and not in demo mode`);
           return new Response(JSON.stringify({
             success: false,
             error: `Medication with ID ${effectiveMedicationId} not found`
@@ -246,6 +259,7 @@ serve(async (req) => {
       }
       
       const effectiveMedication = medication || placeholderMedication;
+      console.log(`[${requestId}] Using medication for notification:`, effectiveMedication);
       
       // Check that medication belongs to the user (skip in demo mode)
       if (!isDemoMode && effectiveMedication && effectiveMedication.user_id !== effectiveUserId) {
@@ -270,11 +284,13 @@ serve(async (req) => {
         customMessage: customMessage || `Time to take your ${effectiveMedication?.name} (${effectiveMedication?.dosage})`,
         priorityLevel: 'high',
         demoMode: isDemoMode, // Pass the demo mode flag to the send-notification function
-        testMode: testMode, // Pass the test mode flag
-        recipientEmail: testMode ? body.recipientEmail : undefined
+        testMode: testMode,   // Pass the test mode flag
+        preventDuplicates: preventDuplicates !== false, // Default to preventing duplicates 
+        recipientEmail: testMode ? body.recipientEmail : undefined,
+        medication: effectiveMedication // Pass the full medication object to ensure correct data
       };
       
-      console.log(`[${requestId}] Sending notification with payload:`, alertPayload);
+      console.log(`[${requestId}] Sending notification with payload:`, JSON.stringify(alertPayload, null, 2));
       
       // Send notification
       const { data: notificationResult, error: notifyError } = await supabaseAdmin.functions.invoke(

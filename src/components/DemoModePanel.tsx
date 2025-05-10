@@ -70,7 +70,8 @@ export const DemoModePanel = () => {
         demoMode: true,
         testMode: !user, // If no user, use test mode to avoid auth issues
         autoProcessEmails: true, // Auto-process emails immediately
-        preventDuplicates: true // Prevent duplicate emails
+        preventDuplicates: true, // Prevent duplicate emails
+        medication: selectedMed // Pass the full medication object to ensure correct data
       });
 
       if (!response.success) {

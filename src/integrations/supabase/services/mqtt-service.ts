@@ -6,8 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 // MQTT broker connection details - match ESP8266 sketch
 const MQTT_BROKER = "df116a1a463d460c99605be93a4db7db.s1.eu.hivemq.cloud";
 const MQTT_PORT = "8883";
-const MQTT_USERNAME = "hivemq.webclient.1746829092080";
-const MQTT_PASSWORD = "lvHQa.w*0r8i5L7,mT:X";
+const MQTT_USERNAME = "hivemq.webclient.1746880653510";
+const MQTT_PASSWORD = "3Q#?wJD7c&N4Az.0hqtU";
 const MQTT_TOPIC_REMINDERS = "medication/reminders"; // Topic ESP8266 is subscribed to
 const MQTT_TOPIC_STATUS = "medication/status";      // Topic ESP8266 publishes to
 
@@ -35,13 +35,7 @@ export const sendMqttNotification = async (
     const payload = {
       medication: medicationDetails.name || "Unknown Medication",
       dosage: medicationDetails.dosage || "As prescribed",
-      instructions: medicationDetails.instructions || message,
-      timestamp: new Date().toISOString(),
-      alertType: 'medication',
-      medicationId: medicationDetails.medicationId || null,
-      action: medicationDetails.action || 'reminder',
-      requestId,
-      deviceId
+      instructions: medicationDetails.instructions || message
     };
 
     console.log("Sending MQTT payload:", payload);
@@ -52,8 +46,7 @@ export const sendMqttNotification = async (
         deviceId,
         userId,
         topic: MQTT_TOPIC_REMINDERS, // Use the ESP8266 expected topic
-        payload,
-        requestId
+        payload
       }
     });
 

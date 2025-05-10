@@ -12,8 +12,8 @@ const corsHeaders = {
 // MQTT broker settings to match ESP8266 sketch
 const mqttBroker = Deno.env.get('MQTT_BROKER') || 'df116a1a463d460c99605be93a4db7db.s1.eu.hivemq.cloud';
 const mqttPort = Deno.env.get('MQTT_PORT') || '8883';
-const mqttUsername = Deno.env.get('MQTT_USERNAME') || 'hivemq.webclient.1746829092080';
-const mqttPassword = Deno.env.get('MQTT_PASSWORD') || 'lvHQa.w*0r8i5L7,mT:X';
+const mqttUsername = Deno.env.get('MQTT_USERNAME') || 'hivemq.webclient.1746880653510';
+const mqttPassword = Deno.env.get('MQTT_PASSWORD') || '3Q#?wJD7c&N4Az.0hqtU';
 
 // Generate a random client ID for each connection
 const generateClientId = () => {
@@ -88,7 +88,7 @@ serve(async (req) => {
     
     console.log("MQTT connection result:", connectionResult);
     
-    // Format the payload according to what the ESP8266 sketch expects
+    // Format the payload exactly according to what the ESP8266 sketch expects
     let finalPayload = {
       medication: "",
       dosage: "",
