@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,10 +70,12 @@ export const DemoModePanel = () => {
         testMode: !user, // If no user, use test mode to avoid auth issues
         autoProcessEmails: true, // Auto-process emails immediately
         preventDuplicates: true, // Prevent duplicate emails
-        // Pass medication details separately to ensure correct data (not as part of the request object)
-        medicationName: selectedMed.name,
-        medicationDosage: selectedMed.dosage,
-        medicationInstructions: selectedMed.instructions || "Take as directed"
+        // Include medication details in the metadata object instead of as separate properties
+        metadata: {
+          medicationName: selectedMed.name,
+          medicationDosage: selectedMed.dosage,
+          medicationInstructions: selectedMed.instructions || "Take as directed"
+        }
       });
 
       if (!response.success) {
