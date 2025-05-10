@@ -33,7 +33,7 @@ serve(async (req) => {
     
     // Get request data
     const requestData = await req.json();
-    const { topic, payload, deviceId } = requestData;
+    const { topic, payload, deviceId, userId } = requestData;
     
     // Default topic as in the ESP8266 sketch if not provided
     const defaultTopic = "medication/reminders";
@@ -89,6 +89,7 @@ serve(async (req) => {
     console.log("MQTT connection result:", connectionResult);
     
     // Format the payload exactly according to what the ESP8266 sketch expects
+    // ESP8266 sketch expects: { medication: "name", dosage: "amount", instructions: "text" }
     let finalPayload = {
       medication: "",
       dosage: "",
@@ -110,7 +111,7 @@ serve(async (req) => {
     } else if (typeof payload === 'object') {
       // If it's already an object, ensure it has the required fields
       finalPayload = {
-        medication: payload.medication || payload.name || "Unknown Medication",
+        medication: payload.name || payload.medication || payload.medicationName || "Unknown Medication",
         dosage: payload.dosage || "Standard Dose",
         instructions: payload.instructions || payload.message || ""
       };

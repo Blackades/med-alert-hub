@@ -58,7 +58,7 @@ export const DemoModePanel = () => {
         medicationId: selectedMedication, 
         type: notificationType,
         demoMode: true,
-        medication: selectedMed
+        selectedMed
       });
       
       // Call the notification service with the selected medication ID
@@ -71,7 +71,10 @@ export const DemoModePanel = () => {
         testMode: !user, // If no user, use test mode to avoid auth issues
         autoProcessEmails: true, // Auto-process emails immediately
         preventDuplicates: true, // Prevent duplicate emails
-        medication: selectedMed // Pass the full medication object to ensure correct data
+        // Pass medication details separately to ensure correct data (not as part of the request object)
+        medicationName: selectedMed.name,
+        medicationDosage: selectedMed.dosage,
+        medicationInstructions: selectedMed.instructions || "Take as directed"
       });
 
       if (!response.success) {
@@ -164,13 +167,11 @@ export const DemoModePanel = () => {
         throw new Error("Could not find the selected medication");
       }
       
-      // Create a proper demo medication object
-      const demoMedication = {
+      // Create a proper demo medication object with the correct name
+      const medDetails = {
         name: selectedMed.name,
         dosage: selectedMed.dosage,
-        instructions: selectedMed.instructions || "Take as directed",
-        medicationId: selectedMedication || "demo-" + Math.random().toString(36).substring(2, 9),
-        action: 'reminder'
+        instructions: selectedMed.instructions || "Take as directed"
       };
       
       // Send email notification
@@ -178,29 +179,34 @@ export const DemoModePanel = () => {
         body: {
           userId: user.id,
           email: user.email,
+          medicationId: selectedMedication || "demo-medication-id",
           recipientName: "Demo User",
-          medicationName: demoMedication.name,
-          dosage: demoMedication.dosage,
-          instructions: demoMedication.instructions,
+          medicationName: medDetails.name,
+          dosage: medDetails.dosage,
+          instructions: medDetails.instructions,
           preventDuplicates: true
         },
       });
 
       // Also send MQTT notification if applicable
-      try {
-        const mqttResponse = await sendMqttNotificationsToAllDevices(
-          user.id, 
-          `Time to take your ${demoMedication.name}`,
-          {
-            ...demoMedication,
-            demoMode: true
-          }
-        );
-        
-        console.log("MQTT demo notification response:", mqttResponse);
-      } catch (mqttError) {
-        console.error("MQTT demo notification error:", mqttError);
-        // Continue even if MQTT fails
+      if (notificationType === "mqtt" || notificationType === "both") {
+        try {
+          const mqttResponse = await sendMqttNotificationsToAllDevices(
+            user.id, 
+            `Time to take your ${medDetails.name}`,
+            {
+              name: medDetails.name,
+              dosage: medDetails.dosage,
+              instructions: medDetails.instructions,
+              demoMode: true
+            }
+          );
+          
+          console.log("MQTT demo notification response:", mqttResponse);
+        } catch (mqttError) {
+          console.error("MQTT demo notification error:", mqttError);
+          // Continue even if MQTT fails
+        }
       }
 
       if (emailResult.error) {
@@ -209,7 +215,7 @@ export const DemoModePanel = () => {
 
       toast({
         title: "Demo Notification Sent",
-        description: `Check your inbox for the demo notification email for ${demoMedication.name} and watch for device alerts.`,
+        description: `Check your inbox for the demo notification email for ${medDetails.name} and watch for device alerts.`,
       });
     } catch (error: any) {
       console.error("Demo notification error:", error);

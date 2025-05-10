@@ -32,8 +32,9 @@ export const sendMqttNotification = async (
     const requestId = uuidv4();
 
     // Format the payload to match what the ESP8266 expects - this must match the ESP8266 code format
+    // ESP8266 sketch expects: { medication: "name", dosage: "amount", instructions: "text" }
     const payload = {
-      medication: medicationDetails.name || "Unknown Medication",
+      medication: medicationDetails.name || medicationDetails.medication || medicationDetails.medicationName || "Unknown Medication",
       dosage: medicationDetails.dosage || "As prescribed",
       instructions: medicationDetails.instructions || message
     };
@@ -89,6 +90,7 @@ export const sendMqttNotificationsToAllDevices = async (
 ) => {
   try {
     console.log(`Sending MQTT notifications to all devices for user: ${userId}`);
+    console.log("Medication details:", medicationDetails);
     
     // Get all active MQTT devices for the user
     const { devices } = await getUserMqttDevices(userId);
@@ -100,8 +102,9 @@ export const sendMqttNotificationsToAllDevices = async (
       if (medicationDetails.demoMode) {
         console.log("Demo mode enabled, sending to demo device");
         return await sendMqttNotification(userId, "demo-device", message, {
-          ...medicationDetails,
           name: medicationDetails.name || "Demo Medication", 
+          dosage: medicationDetails.dosage || "10mg",
+          instructions: medicationDetails.instructions || "Take as directed"
         });
       }
       
@@ -138,8 +141,9 @@ export const sendMqttNotificationsToAllDevices = async (
     if (medicationDetails.demoMode) {
       console.log("Error with regular devices but demo mode enabled, sending to demo device");
       return await sendMqttNotification(userId, "demo-device", message, {
-        ...medicationDetails,
         name: medicationDetails.name || "Demo Medication",
+        dosage: medicationDetails.dosage || "10mg",
+        instructions: medicationDetails.instructions || "Take as directed"
       });
     }
     
